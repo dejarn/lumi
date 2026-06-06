@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
+import { reloadCronJobs } from "@/lib/automation/scheduler"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -35,6 +36,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (isResponse(auth)) return auth
 
   const { id } = await params
-  await prisma.device.delete({ where: { id } })
+  await prisma.$transaction([
+    prisma.trigger.updateMany({ where: { sensorDeviceId: id }, data: { enabled: false } }),
+    prisma.device.delete({ where: { id } }),
+  ])
+  await reloadCronJobs()
   return new NextResponse(null, { status: 204 })
 }

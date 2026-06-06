@@ -16,9 +16,35 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "deviceIds required" }, { status: 400 })
   }
 
-  // TODO: read each device's current light state, upsert SceneDevice rows
-  // (replacing existing rows for those devices), reject SENSOR ids with 422.
-  void prisma
-  void id
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 })
+  const devices = await prisma.device.findMany({
+    where: { id: { in: deviceIds } },
+    select: { id: true, kind: true, power: true, brightness: true, hue: true,
+              saturation: true, colorBrightness: true, animId: true },
+  })
+  if (devices.length !== deviceIds.length)
+    return NextResponse.json({ error: "One or more devices not found" }, { status: 404 })
+  if (devices.some((d) => d.kind === "SENSOR"))
+    return NextResponse.json({ error: "SENSOR devices cannot be captured" }, { status: 422 })
+
+  const scene = await prisma.scene.findUnique({ where: { id }, select: { id: true } })
+  if (!scene) return NextResponse.json({ error: "Scene not found" }, { status: 404 })
+
+  const data = devices.map((d) => ({
+    sceneId: id,
+    deviceId: d.id,
+    power: d.power ?? false,
+    brightness: d.brightness ?? 0,
+    hue: d.hue ?? 0,
+    saturation: d.saturation ?? 0,
+    colorBrightness: d.colorBrightness ?? 0,
+    animId: d.animId ?? 0,
+  }))
+
+  const captured = await prisma.$transaction(async (tx) => {
+    await tx.sceneDevice.deleteMany({ where: { sceneId: id, deviceId: { in: deviceIds } } })
+    await tx.sceneDevice.createMany({ data })
+    return tx.sceneDevice.findMany({ where: { sceneId: id, deviceId: { in: deviceIds } } })
+  })
+
+  return NextResponse.json(captured)
 }

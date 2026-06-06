@@ -20,7 +20,27 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const command = (await req.json()) as DeviceCommand
-  // TODO: validate command shape + field ranges (hue 0–65535, rest 0–255).
+  function isUint8(n: unknown): n is number {
+    return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 255
+  }
+  const cmd = command as Record<string, unknown>
+  if (cmd.type === "power") {
+    if (typeof cmd.on !== "boolean")
+      return NextResponse.json({ error: "power requires boolean 'on'" }, { status: 422 })
+  } else if (cmd.type === "brightness") {
+    if (!isUint8(cmd.brightness))
+      return NextResponse.json({ error: "brightness must be 0–255" }, { status: 422 })
+  } else if (cmd.type === "color") {
+    if (typeof cmd.hue !== "number" || !Number.isInteger(cmd.hue) || cmd.hue < 0 || cmd.hue > 65535)
+      return NextResponse.json({ error: "hue must be 0–65535" }, { status: 422 })
+    if (!isUint8(cmd.saturation) || !isUint8(cmd.brightness))
+      return NextResponse.json({ error: "saturation and brightness must be 0–255" }, { status: 422 })
+  } else if (cmd.type === "animation") {
+    if (!isUint8(cmd.animId) || !isUint8(cmd.speed) || !isUint8(cmd.intensity))
+      return NextResponse.json({ error: "animId, speed, intensity must be 0–255" }, { status: 422 })
+  } else if (cmd.type !== "stopAnimation") {
+    return NextResponse.json({ error: `Unknown command type: ${String(cmd.type)}` }, { status: 422 })
+  }
   const res = await sendCommand(id, command)
   if (!res.ok) return NextResponse.json({ error: "Bridge error" }, { status: 502 })
 

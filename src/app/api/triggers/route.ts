@@ -19,9 +19,41 @@ export async function POST(req: NextRequest) {
   if (isResponse(auth)) return auth
 
   const body = await req.json()
-  // TODO: validate type invariants (CRON vs SENSOR fields), verify sensorDeviceId
-  // references a SENSOR device, then prisma.trigger.create + reloadCronJobs().
-  void body
-  await reloadCronJobs()
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 })
+  const { name, type, sceneId, cronExpr, sensorDeviceId, sensorState, enabled } = body
+
+  if (typeof name !== "string" || !name.trim())
+    return NextResponse.json({ error: "name required" }, { status: 422 })
+  if (typeof sceneId !== "string" || !sceneId)
+    return NextResponse.json({ error: "sceneId required" }, { status: 422 })
+
+  if (type === "CRON") {
+    if (typeof cronExpr !== "string" || !cronExpr.trim())
+      return NextResponse.json({ error: "cronExpr required for CRON trigger" }, { status: 422 })
+    if (sensorDeviceId != null || sensorState != null)
+      return NextResponse.json({ error: "sensorDeviceId/sensorState not allowed on CRON" }, { status: 422 })
+    const trigger = await prisma.trigger.create({
+      data: { name: name.trim(), type: "CRON", cronExpr: cronExpr.trim(), sceneId, enabled: enabled ?? true },
+    })
+    await reloadCronJobs()
+    return NextResponse.json(trigger, { status: 201 })
+  }
+
+  if (type === "SENSOR") {
+    if (typeof sensorDeviceId !== "string" || !sensorDeviceId)
+      return NextResponse.json({ error: "sensorDeviceId required for SENSOR trigger" }, { status: 422 })
+    if (typeof sensorState !== "boolean")
+      return NextResponse.json({ error: "sensorState (boolean) required for SENSOR trigger" }, { status: 422 })
+    if (cronExpr != null)
+      return NextResponse.json({ error: "cronExpr not allowed on SENSOR trigger" }, { status: 422 })
+    const sensor = await prisma.device.findUnique({ where: { id: sensorDeviceId }, select: { kind: true } })
+    if (!sensor) return NextResponse.json({ error: "sensorDevice not found" }, { status: 422 })
+    if (sensor.kind !== "SENSOR") return NextResponse.json({ error: "Device is not a SENSOR" }, { status: 422 })
+    const trigger = await prisma.trigger.create({
+      data: { name: name.trim(), type: "SENSOR", sensorDeviceId, sensorState, sceneId, enabled: enabled ?? true },
+    })
+    await reloadCronJobs()
+    return NextResponse.json(trigger, { status: 201 })
+  }
+
+  return NextResponse.json({ error: "type must be CRON or SENSOR" }, { status: 422 })
 }

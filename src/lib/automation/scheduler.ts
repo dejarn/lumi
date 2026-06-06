@@ -1,5 +1,8 @@
+import cron from "node-cron"
+import { Client } from "pg"
 import { prisma } from "@/lib/prisma"
 import { sendCommand } from "@/lib/bridge-client"
+import type { DeviceCommand } from "@/lib/types"
 
 // Trigger evaluation runs in the Next.js server process, NOT the bridge
 // (CLAUDE.md rule 6, docs/automation.md). Started once from instrumentation.ts.
@@ -10,17 +13,26 @@ import { sendCommand } from "@/lib/bridge-client"
 // v1 has no debounce: a noisy presence sensor fires on every flip.
 
 let started = false
+const cronJobs = new Map<string, cron.ScheduledTask>()
 
 /** Boot the scheduler once. Idempotent. */
 export async function startScheduler(): Promise<void> {
   if (started) return
   started = true
 
-  // TODO: register node-cron jobs for enabled CRON triggers.
   await reloadCronJobs()
 
-  // TODO: open a dedicated PG client doing `LISTEN device_state`; on each
-  // notification call onSensorEvent(deviceId).
+  const pgClient = new Client({ connectionString: process.env.DATABASE_URL })
+  await pgClient.connect()
+  await pgClient.query("LISTEN device_state")
+  pgClient.on("notification", (msg) => {
+    if (msg.channel === "device_state" && msg.payload) {
+      onSensorEvent(msg.payload).catch(() => {})
+    }
+  })
+  pgClient.on("error", (err) => {
+    console.error("[scheduler] PG client error", err)
+  })
 }
 
 /**
@@ -29,8 +41,24 @@ export async function startScheduler(): Promise<void> {
  * without a restart (docs/automation.md#cron-triggers).
  */
 export async function reloadCronJobs(): Promise<void> {
-  // TODO: read enabled CRON triggers, (re)schedule one node-cron job each.
-  void prisma
+  for (const job of cronJobs.values()) job.stop()
+  cronJobs.clear()
+
+  const triggers = await prisma.trigger.findMany({
+    where: { type: "CRON", enabled: true, cronExpr: { not: null } },
+    select: { id: true, cronExpr: true, sceneId: true },
+  })
+
+  for (const trigger of triggers) {
+    if (!trigger.cronExpr || !cron.validate(trigger.cronExpr)) continue
+    const job = cron.schedule(trigger.cronExpr, async () => {
+      await activateScene(trigger.sceneId)
+      await prisma.trigger
+        .update({ where: { id: trigger.id }, data: { lastFiredAt: new Date() } })
+        .catch(() => {})
+    })
+    cronJobs.set(trigger.id, job)
+  }
 }
 
 /**
@@ -39,8 +67,30 @@ export async function reloadCronJobs(): Promise<void> {
  * sensorActive value, then activates the linked scene (best-effort fan-out).
  */
 export async function onSensorEvent(deviceId: string): Promise<void> {
-  // TODO: query matching triggers, activate scenes via activateScene().
-  void deviceId
+  const device = await prisma.device.findUnique({
+    where: { id: deviceId },
+    select: { kind: true, sensorActive: true },
+  })
+  if (!device || device.kind !== "SENSOR" || device.sensorActive === null) return
+
+  const triggers = await prisma.trigger.findMany({
+    where: {
+      type: "SENSOR",
+      enabled: true,
+      sensorDeviceId: deviceId,
+      sensorState: device.sensorActive,
+    },
+    select: { id: true, sceneId: true },
+  })
+
+  await Promise.all(
+    triggers.map(async (trigger) => {
+      await activateScene(trigger.sceneId)
+      await prisma.trigger
+        .update({ where: { id: trigger.id }, data: { lastFiredAt: new Date() } })
+        .catch(() => {})
+    }),
+  )
 }
 
 /**
@@ -50,17 +100,20 @@ export async function onSensorEvent(deviceId: string): Promise<void> {
 export async function activateScene(sceneId: string): Promise<void> {
   const rows = await prisma.sceneDevice.findMany({ where: { sceneId } })
   await Promise.all(
-    rows.map((row) =>
-      sendCommand(row.deviceId, {
-        type: "color",
-        hue: row.hue,
-        saturation: row.saturation,
-        brightness: row.brightness,
-      }).catch(() => {
-        // best-effort: swallow per-device failures
-      }),
-    ),
+    rows.map(async (row) => {
+      const commands: DeviceCommand[] = [{ type: "power", on: row.power }]
+
+      if (row.animId !== 0) {
+        // speed/intensity not stored in v1 STATE_REPORT — use defaults
+        commands.push({ type: "stopAnimation" })
+        commands.push({ type: "animation", animId: row.animId, speed: 128, intensity: 200 })
+      } else {
+        commands.push({ type: "color", hue: row.hue, saturation: row.saturation, brightness: row.brightness })
+      }
+
+      for (const cmd of commands) {
+        await sendCommand(row.deviceId, cmd).catch(() => {})
+      }
+    }),
   )
-  await prisma.scene.findUnique({ where: { id: sceneId } })
-  // TODO: also fan out power/animation state, set Trigger.lastFiredAt when fired by a trigger.
 }

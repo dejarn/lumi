@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
@@ -22,9 +23,16 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const role = body.role === "ADMIN" ? "ADMIN" : "USER"
-  // TODO: generate a random token, store its hash (sha-256), set expiresAt,
-  // return { id, token, role, expiresAt, usedAt: null }.
-  void role
-  void prisma
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 })
+
+  const rawToken = crypto.randomBytes(32).toString("hex")
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex")
+  const expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000)
+
+  const invite = await prisma.invite.create({
+    data: { tokenHash, role, expiresAt, createdById: auth.id },
+  })
+  return NextResponse.json(
+    { id: invite.id, token: rawToken, role: invite.role, expiresAt: invite.expiresAt, usedAt: null },
+    { status: 201 },
+  )
 }
