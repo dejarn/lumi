@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Protocol {
+  HUE
+  LUMI
+  ZIGBEE
+}
+
+enum DeviceKind {
+  LIGHT
+  SENSOR
+}
+
+enum TriggerType {
+  CRON
+  SENSOR
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(uuid())
+  username       String   @unique
+  hashedPassword String
+  role           Role     @default(USER)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  invites        Invite[]
+
+  @@map("users")
+}
+
+// Single-use, time-limited invite. Raw token returned once at creation; only the
+// hash is stored (see docs/api.md#invites).
+model Invite {
+  id          String    @id @default(uuid())
+  tokenHash   String    @unique
+  role        Role      @default(USER)
+  createdById String?
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@map("invites")
+}
+
+// ─── Devices ─────────────────────────────────────────────────────────────────
+
+// One table for all three protocols. Live device state lives on the row itself
+// so the SSE hot path needs no join (docs/database.md#source-of-truth).
+model Device {
+  id           String     @id @default(uuid())
+  name         String
+  protocol     Protocol
+  externalId   String
+  kind         DeviceKind
+  zone         Int        @default(0)
+  reachable    Boolean    @default(true)
+  protoVersion Int?
+  lastSeen     DateTime?
+  createdAt    DateTime   @default(now())
+
+  // Live light state (kind = LIGHT)
+  power           Boolean?
+  brightness      Int?
+  hue             Int?
+  saturation      Int?
+  colorBrightness Int?
+  animId          Int?     @default(0)
+
+  // Live sensor state (kind = SENSOR)
+  sensorActive    Boolean?
+
+  sceneDevices    SceneDevice[]
+  sensorTriggers  Trigger[]     @relation("TriggerSensor")
+
+  @@unique([protocol, externalId])
+  @@map("devices")
+}
+
+// ─── Scenes ──────────────────────────────────────────────────────────────────
+
+model Scene {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  sceneDevices SceneDevice[]
+  triggers     Trigger[]
+
+  @@map("scenes")
+}
+
+// Saved target state of one LIGHT within a scene.
+model SceneDevice {
+  sceneId         String
+  deviceId        String
+  power           Boolean
+  brightness      Int
+  hue             Int
+  saturation      Int
+  colorBrightness Int
+  animId          Int     @default(0)
+
+  scene  Scene  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@id([sceneId, deviceId])
+  @@map("scene_devices")
+}
+
+// ─── Triggers ────────────────────────────────────────────────────────────────
+
+// Polymorphic on `type`; type-specific columns are nullable and enforced at the
+// API level (docs/database.md#trigger, docs/automation.md).
+model Trigger {
+  id             String      @id @default(uuid())
+  name           String
+  type           TriggerType
+  sceneId        String
+  enabled        Boolean     @default(true)
+  cronExpr       String?
+  sensorDeviceId String?
+  sensorState    Boolean?
+  lastFiredAt    DateTime?
+  createdAt      DateTime    @default(now())
+
+  scene        Scene   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  sensorDevice Device? @relation("TriggerSensor", fields: [sensorDeviceId], references: [id], onDelete: SetNull)
+
+  @@map("triggers")
+}
