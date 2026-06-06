@@ -11,6 +11,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
+      "lumi-protocol": resolve(
+        __dirname,
+        "./bridge/node_modules/lumi-protocol/dist/index.js",
+      ),
     },
   },
 })
