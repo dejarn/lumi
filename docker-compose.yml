@@ -1,0 +1,130 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_reservation: 256m
+    mem_limit: 512m
+    cpus: "1.0"
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    entrypoint: ["sh", "-c"]
+    command:
+      - "node node_modules/prisma/build/index.js migrate deploy"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: "no"
+
+  mosquitto:
+    image: eclipse-mosquitto:openssl
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+    networks:
+      - internal
+    mem_limit: 128m
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt
+    restart: unless-stopped
+    volumes:
+      - zigbee2mqtt_data:/app/data
+    depends_on:
+      - mosquitto
+    networks:
+      - internal
+    # devices:
+    #   - /dev/ttyACM0:/dev/ttyACM0   # CC2652P coordinator dongle
+    mem_limit: 256m
+
+  mqtt-bridge:
+    build:
+      context: .
+      dockerfile: bridge/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      MQTT_URL: mqtt://mosquitto:1883
+      HUE_BRIDGE_IP: ${HUE_BRIDGE_IP}
+      BRIDGE_TOKEN: ${BRIDGE_TOKEN}
+      BRIDGE_PORT: "4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+    networks:
+      - internal
+    mem_limit: 256m
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      BRIDGE_URL: http://mqtt-bridge:4000
+      BRIDGE_TOKEN: ${BRIDGE_TOKEN}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      mqtt-bridge:
+        condition: service_started
+    networks:
+      - internal
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.lumi.rule=Host(`${APP_HOST:?APP_HOST is required}`)
+      - traefik.http.routers.lumi.entrypoints=websecure
+      - traefik.http.routers.lumi.tls=true
+      - traefik.http.routers.lumi.tls.certresolver=letsencrypt
+      - traefik.http.services.lumi.loadbalancer.server.port=3000
+      # Rate-limit auth endpoints
+      - traefik.http.middlewares.lumi-authratelimit.ratelimit.average=10
+      - traefik.http.middlewares.lumi-authratelimit.ratelimit.burst=20
+    mem_reservation: 128m
+    mem_limit: 512m
+    cpus: "0.5"
+
+networks:
+  internal:
+    internal: true
+  traefik:
+    external: true
+    name: traefik
+
+volumes:
+  db_data:
+  mosquitto_data:
+  zigbee2mqtt_data:
