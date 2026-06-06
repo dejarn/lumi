@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumi — Moodboard design</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --page-bg: #080910;
+      --page-text: #e8e6f0;
+      --page-muted: #8b8798;
+      --page-accent: #f0a84a;
+      --page-border: rgba(255,255,255,0.08);
+      --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+
+      --lumi-bg-base: #0c0e14;
+      --lumi-ambient-1: rgba(255, 150, 60, 0.22);
+      --lumi-ambient-2: rgba(80, 140, 255, 0.18);
+      --lumi-ambient-3: rgba(160, 90, 240, 0.12);
+      --lumi-glass-bg: rgba(255, 255, 255, 0.07);
+      --lumi-glass-border: rgba(255, 255, 255, 0.14);
+      --lumi-glass-blur: 12px;
+      --lumi-glass-saturate: 130%;
+      --lumi-accent: #f0a84a;
+      --lumi-accent-dim: rgba(240, 168, 74, 0.45);
+      --lumi-text: rgba(255, 255, 255, 0.94);
+      --lumi-text-muted: rgba(255, 255, 255, 0.52);
+      --lumi-radius-md: 16px;
+      --lumi-radius-sm: 12px;
+      --lumi-radius-xs: 10px;
+      --lumi-glow-warm: rgba(255, 176, 80, 0.45);
+      --lumi-glow-blue: rgba(90, 154, 255, 0.45);
+      --lumi-glow-sensor: rgba(94, 207, 138, 0.35);
+      --lumi-inset-warm: rgba(255, 160, 60, 0.08);
+      --lumi-scrim: rgba(0, 0, 0, 0.5);
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--page-bg);
+      color: var(--page-text);
+      line-height: 1.5;
+    }
+
+    /* ── Moodboard layout ─────────────────────────────────────── */
+    .hero {
+      padding: 3rem 2rem 2.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--page-border);
+      background:
+        radial-gradient(ellipse 60% 80% at 20% 100%, rgba(255,150,60,0.08), transparent),
+        radial-gradient(ellipse 50% 60% at 80% 0%, rgba(80,140,255,0.06), transparent);
+    }
+
+    .hero__tag {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--page-accent);
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 6vw, 3.5rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero p {
+      color: var(--page-muted);
+      max-width: 52ch;
+      margin: 0 auto 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    .hero__pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.4rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .pill {
+      font-size: 0.68rem;
+      font-weight: 500;
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid rgba(240,168,74,0.25);
+      background: rgba(240,168,74,0.06);
+      color: var(--page-accent);
+    }
+
+    .board {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      display: grid;
+      gap: 2.5rem;
+    }
+
+    .panel {
+      border: 1px solid var(--page-border);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.02);
+      overflow: hidden;
+    }
+
+    .panel__head {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--page-border);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .panel__title {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .panel__sub {
+      font-size: 0.75rem;
+      color: var(--page-muted);
+    }
+
+    .panel__body {
+      padding: 1.25rem;
+    }
+
+    /* ── Tokens row ───────────────────────────────────────────── */
+    .tokens-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+    }
+
+    .token-card {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--page-border);
+    }
+
+    .token-card__swatch { height: 56px; }
+    .token-card__info {
+      padding: 8px 10px;
+      font-size: 0.65rem;
+      color: var(--page-muted);
+    }
+
+    .token-card__info strong {
+      display: block;
+      color: var(--page-text);
+      font-family: ui-monospace, monospace;
+      font-size: 0.62rem;
+      margin-bottom: 2px;
+    }
+
+    .type-sample h2 {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.35rem;
+    }
+
+    .type-sample p { color: var(--page-muted); font-size: 0.85rem; }
+
+    .glass-demo {
+      border-radius: var(--lumi-radius-md);
+      padding: 1.25rem;
+      position: relative;
+      min-height: 100px;
+    }
+
+    .glass-demo__bg {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        radial-gradient(circle at 30% 70%, rgba(255,150,60,0.35), transparent 50%),
+        radial-gradient(circle at 70% 30%, rgba(80,140,255,0.3), transparent 50%);
+    }
+
+    .glass-demo__content {
+      position: relative;
+      font-size: 0.78rem;
+      color: var(--lumi-text-muted);
+    }
+
+    /* ── Tile library ─────────────────────────────────────────── */
+    .tile-lib {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+    }
+
+    .tile-lib__label {
+      grid-column: 1 / -1;
+      font-size: 0.68rem;
+      color: var(--page-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: -4px;
+    }
+
+    /* ── Phones grid ──────────────────────────────────────────── */
+    .phones {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+      justify-items: center;
+    }
+
+    .phone-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .phone-item__cap {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--page-muted);
+      text-align: center;
+    }
+
+    .phone-item__cap small {
+      display: block;
+      font-weight: 400;
+      font-size: 0.65rem;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .phone {
+      width: 280px;
+      height: 560px;
+      border-radius: 32px;
+      border: 3px solid rgba(255,255,255,0.1);
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      flex-shrink: 0;
+    }
+
+    .phone--short { height: 500px; }
+
+    .phone__notch {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 88px;
+      height: 24px;
+      background: #000;
+      border-radius: 16px;
+      z-index: 200;
+    }
+
+    .phone__screen {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Lumi app shell (scaled ~72%) ─────────────────────────── */
+    .lumi {
+      font-family: var(--font-body);
+      color: var(--lumi-text);
+      width: 100%;
+      height: 100%;
+      position: relative;
+      font-size: 0.72rem;
+    }
+
+    .lumi__bg { position: absolute; inset: 0; background: var(--lumi-bg-base); }
+
+    .lumi__ambient {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 55% at 15% 78%, var(--lumi-ambient-1), transparent 68%),
+        radial-gradient(ellipse 55% 45% at 82% 22%, var(--lumi-ambient-2), transparent 62%),
+        radial-gradient(ellipse 42% 36% at 52% 48%, var(--lumi-ambient-3), transparent 58%);
+    }
+
+    .glass {
+      background: var(--lumi-glass-bg);
+      border: 1px solid var(--lumi-glass-border);
+      backdrop-filter: blur(var(--lumi-glass-blur)) saturate(var(--lumi-glass-saturate));
+      -webkit-backdrop-filter: blur(var(--lumi-glass-blur)) saturate(var(--lumi-glass-saturate));
+    }
+
+    .bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 6px;
+      margin: -2px -2px 0.75rem;
+      border-radius: 0 0 12px 12px;
+      border-bottom: 1px solid var(--lumi-accent-dim);
+    }
+
+    .bar__logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -0.03em;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      padding: 44px 12px 12px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sec-title {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--lumi-text-muted);
+      margin-bottom: 6px;
+    }
+
+    .tiles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .tile {
+      border-radius: 12px;
+      padding: 8px;
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .tile__name { font-size: 0.68rem; font-weight: 600; }
+    .tile__state { font-size: 0.58rem; color: var(--lumi-text-muted); }
+
+    .tile--warm { border-color: var(--lumi-glow-warm) !important; box-shadow: inset 0 0 14px var(--lumi-inset-warm); }
+    .tile--blue { border-color: var(--lumi-glow-blue) !important; box-shadow: inset 0 0 14px rgba(90,154,255,0.08); }
+    .tile--sensor { border-color: var(--lumi-glow-sensor) !important; }
+    .tile--offline { opacity: 0.4; filter: grayscale(0.6); }
+
+    .tile--animating {
+      animation: border-rainbow 4s linear infinite;
+    }
+
+    @keyframes border-rainbow {
+      0% { border-color: rgba(255,120,100,0.55); box-shadow: inset 0 0 14px rgba(255,120,100,0.1); }
+      33% { border-color: rgba(120,230,160,0.55); box-shadow: inset 0 0 14px rgba(120,230,160,0.1); }
+      66% { border-color: rgba(100,160,255,0.55); box-shadow: inset 0 0 14px rgba(100,160,255,0.1); }
+      100% { border-color: rgba(255,120,100,0.55); }
+    }
+
+    .tile__wave {
+      height: 8px;
+      border-radius: 4px;
+      margin-top: auto;
+      background: linear-gradient(90deg, #ff6050, #ffb050, #50ff90, #50a0ff, #ff6050);
+      background-size: 200% 100%;
+      animation: wave-scroll 2.5s linear infinite;
+    }
+
+    @keyframes wave-scroll { to { background-position: 200% 0; } }
+
+    .tile__state--anim { color: var(--lumi-accent); font-weight: 500; }
+
+    .tile--selected {
+      border-color: var(--lumi-accent-dim) !important;
+      box-shadow: inset 0 0 12px rgba(240,168,74,0.1);
+      outline: 2px solid rgba(240,168,74,0.3);
+      outline-offset: -2px;
+    }
+
+    .capture-banner {
+      border-radius: 10px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-color: var(--lumi-accent-dim);
+    }
+
+    .capture-banner__text { font-size: 0.65rem; font-weight: 600; }
+    .capture-banner__sub { font-size: 0.55rem; color: var(--lumi-text-muted); }
+    .capture-banner__btn {
+      font-size: 0.55rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--lumi-accent-dim);
+      color: var(--lumi-accent);
+      white-space: nowrap;
+    }
+
+    .fab {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      z-index: 20;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: rgba(240,168,74,0.2);
+      border: 1px solid var(--lumi-accent-dim);
+      color: var(--lumi-accent);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    /* Scenes */
+    .scene-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .scene {
+      border-radius: 10px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .scene--active {
+      border-color: var(--lumi-accent-dim) !important;
+      box-shadow: inset 0 0 12px rgba(240,168,74,0.06);
+    }
+
+    .scene__name { font-size: 0.75rem; font-weight: 600; }
+    .scene__meta { font-size: 0.58rem; color: var(--lumi-text-muted); }
+
+    /* Sheet */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+
+    .overlay__backdrop {
+      position: absolute;
+      inset: 0;
+      background: var(--lumi-scrim);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .sheet {
+      position: relative;
+      z-index: 1;
+      margin: 0 8px 10px;
+      border-radius: 16px 16px 12px 12px;
+      padding: 6px 12px 12px;
+    }
+
+    .sheet__handle {
+      width: 28px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.2);
+      margin: 4px auto 10px;
+    }
+
+    .sheet__title {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .segments {
+      display: flex;
+      gap: 3px;
+      padding: 3px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .seg {
+      flex: 1;
+      padding: 5px;
+      border-radius: 6px;
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--lumi-text-muted);
+      border: 1px solid transparent;
+    }
+
+    .seg--on {
+      background: rgba(240,168,74,0.1);
+      border-color: var(--lumi-accent-dim);
+      color: var(--lumi-accent);
+    }
+
+    .wheel {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      background: conic-gradient(hsl(0,90%,55%), hsl(120,90%,50%), hsl(240,90%,55%), hsl(0,90%,55%));
+      border: 2px solid rgba(255,255,255,0.12);
+    }
+
+    .slider {
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.1);
+      margin-bottom: 8px;
+    }
+
+    .slider__fill {
+      height: 100%;
+      width: 70%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, rgba(255,160,60,0.5), #ffb050);
+    }
+
+    .slider__fill--one { width: 65%; }
+
+    /* Drawer mini */
+    .drawer-mini {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 65%;
+      z-index: 60;
+      padding: 44px 0 12px;
+      border-right: 1px solid var(--lumi-accent-dim);
+      box-shadow: inset -1px 0 16px rgba(240,168,74,0.05);
+    }
+
+    .drawer-item {
+      padding: 8px 12px;
+      font-size: 0.68rem;
+      color: var(--lumi-text-muted);
+      border-left: 2px solid transparent;
+      margin: 2px 8px;
+      border-radius: 8px;
+    }
+
+    .drawer-item--on {
+      color: var(--lumi-text);
+      border-color: var(--lumi-accent-dim);
+      background: rgba(240,168,74,0.06);
+      box-shadow: inset 0 0 10px rgba(240,168,74,0.05);
+    }
+
+    .scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.45); z-index: 50; }
+
+    .page--dim { filter: brightness(0.55); }
+
+    /* ── System states ────────────────────────────────────────── */
+    .states-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+      justify-items: center;
+    }
+
+    /* Skeleton */
+    .skeleton {
+      border-radius: 12px;
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.04) 25%,
+        rgba(255,255,255,0.09) 50%,
+        rgba(255,255,255,0.04) 75%
+      );
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    }
+
+    @keyframes skeleton-shimmer { to { background-position: -200% 0; } }
+
+    .tile--skeleton {
+      border-color: var(--page-border) !important;
+      box-shadow: none;
+    }
+
+    .skeleton-line {
+      height: 7px;
+      border-radius: 4px;
+    }
+
+    .skeleton-line--name { width: 60%; }
+    .skeleton-line--state { width: 38%; }
+
+    /* Error / empty inner state */
+    .state-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 8px;
+      padding: 18px 14px;
+      border-radius: var(--lumi-radius-md);
+    }
+
+    .state-card__icon {
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .state-card__title {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .state-card__sub {
+      font-size: 0.6rem;
+      color: var(--lumi-text-muted);
+      max-width: 24ch;
+    }
+
+    .state-card__btn {
+      margin-top: 4px;
+      font-size: 0.6rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--lumi-accent-dim);
+      background: rgba(240,168,74,0.1);
+      color: var(--lumi-accent);
+    }
+
+    .state-card--error {
+      border: 1px solid rgba(255,120,100,0.3);
+      box-shadow: inset 0 0 20px rgba(255,120,100,0.05);
+    }
+
+    .state-card--error .state-card__icon { color: #ff7864; }
+    .state-card--error .state-card__btn {
+      border-color: rgba(255,120,100,0.4);
+      background: rgba(255,120,100,0.1);
+      color: #ff9a8a;
+    }
+
+    /* Offline banner (degraded, top of dashboard) */
+    .offline-banner {
+      border-radius: 10px;
+      padding: 7px 10px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-color: rgba(255,120,100,0.35);
+      box-shadow: inset 0 0 14px rgba(255,120,100,0.05);
+    }
+
+    .offline-banner__dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ff7864;
+      flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(255,120,100,0.6);
+    }
+
+    .offline-banner__text { font-size: 0.6rem; font-weight: 600; }
+
+    /* Toast (command failed) */
+    .toast {
+      border-radius: 10px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-color: rgba(255,120,100,0.35);
+    }
+
+    .toast__text { font-size: 0.6rem; }
+    .toast__action {
+      margin-left: auto;
+      font-size: 0.58rem;
+      font-weight: 600;
+      color: var(--lumi-accent);
+    }
+
+    /* Principles grid */
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .principle {
+      padding: 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--page-border);
+      font-size: 0.72rem;
+      color: var(--page-muted);
+    }
+
+    .principle strong {
+      display: block;
+      color: var(--page-text);
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.75rem;
+      color: var(--page-muted);
+      border-top: 1px solid var(--page-border);
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <span class="hero__tag">Moodboard · Lumi v1</span>
+    <h1>Lumi</h1>
+    <p>
+      Glassmorphism saturé, bordures lumineuses, canvas ambiant multicolore.
+      Mobile-first — contrôle l'éclairage d'un appartement.
+    </p>
+    <div class="hero__pills">
+      <span class="pill">Ambiant multicolore</span>
+      <span class="pill">Verre saturate 130%</span>
+      <span class="pill">Bordure = état</span>
+      <span class="pill">Bottom sheet</span>
+      <span class="pill">Lumières · Capteurs</span>
+      <span class="pill">Bricolage + DM Sans</span>
+    </div>
+  </header>
+
+  <main class="board">
+
+    <!-- Tokens & typo -->
+    <section class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Tokens & typographie</span>
+        <span class="panel__sub">--lumi-* · MUI cssVariables</span>
+      </div>
+      <div class="panel__body">
+        <div class="tokens-row" style="margin-bottom:1.25rem">
+          <div class="token-card">
+            <div class="token-card__swatch" style="background:#0c0e14"></div>
+            <div class="token-card__info"><strong>--lumi-bg-base</strong>#0c0e14</div>
+          </div>
+          <div class="token-card">
+            <div class="token-card__swatch" style="background:#f0a84a"></div>
+            <div class="token-card__info"><strong>--lumi-accent</strong>Chrome actif</div>
+          </div>
+          <div class="token-card">
+            <div class="token-card__swatch" style="background:rgba(255,176,80,0.45)"></div>
+            <div class="token-card__info"><strong>--lumi-glow-warm</strong>Tuile ON</div>
+          </div>
+          <div class="token-card">
+            <div class="token-card__swatch" style="background:rgba(255,255,255,0.07);backdrop-filter:blur(8px)"></div>
+            <div class="token-card__info"><strong>--lumi-glass-bg</strong>blur 12px</div>
+          </div>
+          <div class="token-card">
+            <div class="token-card__swatch" style="background:linear-gradient(135deg,rgba(255,150,60,0.4),rgba(80,140,255,0.3))"></div>
+            <div class="token-card__info"><strong>ambient 1·2·3</strong>Canvas live</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="type-sample">
+            <h2>Salon</h2>
+            <p>Bricolage Grotesque — titres, logo, noms de scènes</p>
+            <p style="margin-top:0.5rem">DM Sans — corps, labels, états device (72 %, Animation · Vague)</p>
+          </div>
+          <div class="glass-demo glass">
+            <div class="glass-demo__bg"></div>
+            <div class="glass-demo__content">
+              <strong style="color:var(--lumi-text);display:block;margin-bottom:4px">Matériau verre</strong>
+              backdrop-filter: blur(12px) saturate(130%)<br>
+              Bordure lumineuse = contour actif
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tile states library -->
+    <section class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Tuiles device — langage d'état</span>
+        <span class="panel__sub">Bordure lumineuse dynamique</span>
+      </div>
+      <div class="panel__body">
+        <div class="tile-lib">
+          <span class="tile-lib__label">Lumières</span>
+          <div class="tile glass tile--warm">
+            <span class="tile__name">Plafond</span>
+            <span class="tile__state">ON · 72%</span>
+          </div>
+          <div class="tile glass tile--blue">
+            <span class="tile__name">Couloir</span>
+            <span class="tile__state">ON · 40%</span>
+          </div>
+          <div class="tile glass tile--animating">
+            <span class="tile__name">Ruban</span>
+            <span class="tile__state tile__state--anim">Animation · Arc-en-ciel</span>
+            <div class="tile__wave"></div>
+          </div>
+          <div class="tile glass">
+            <span class="tile__name">Chambre</span>
+            <span class="tile__state">Éteint</span>
+          </div>
+          <div class="tile glass tile--offline tile--warm">
+            <span class="tile__name">Bureau</span>
+            <span class="tile__state">Hors ligne</span>
+          </div>
+          <span class="tile-lib__label">Capteurs</span>
+          <div class="tile glass tile--sensor">
+            <span class="tile__name">Présence</span>
+            <span class="tile__state">Actif</span>
+          </div>
+          <div class="tile glass tile--sensor" style="opacity:0.7">
+            <span class="tile__name">Porte</span>
+            <span class="tile__state">Inactif</span>
+          </div>
+          <span class="tile-lib__label">Capture (admin)</span>
+          <div class="tile glass tile--warm tile--selected">
+            <span class="tile__name">Plafond ✓</span>
+            <span class="tile__state">Sélectionné</span>
+          </div>
+          <div class="tile glass tile--blue" style="opacity:0.6">
+            <span class="tile__name">Couloir</span>
+            <span class="tile__state">Non inclus</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phone mockups -->
+    <section class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Écrans clés</span>
+        <span class="panel__sub">Mobile-first · 280×560 preview</span>
+      </div>
+      <div class="panel__body">
+        <div class="phones">
+
+          <!-- Dashboard -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Dashboard<small>Lumières · Capteurs</small></span>
+            <div class="phone">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page">
+                    <header class="bar glass">
+                      <span class="bar__logo">Lumi</span>
+                      <span style="opacity:0.6">☰</span>
+                    </header>
+                    <p class="sec-title">Lumières</p>
+                    <div class="tiles" style="margin-bottom:10px">
+                      <div class="tile glass tile--warm"><span class="tile__name">Plafond</span><span class="tile__state">72%</span></div>
+                      <div class="tile glass tile--blue"><span class="tile__name">Couloir</span><span class="tile__state">40%</span></div>
+                      <div class="tile glass tile--animating"><span class="tile__name">Ruban</span><span class="tile__state tile__state--anim">Anim · Arc</span><div class="tile__wave"></div></div>
+                      <div class="tile glass"><span class="tile__name">Chambre</span><span class="tile__state">Off</span></div>
+                    </div>
+                    <p class="sec-title">Capteurs</p>
+                    <div class="tiles">
+                      <div class="tile glass tile--sensor"><span class="tile__name">Présence</span><span class="tile__state">Actif</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Capture mode -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Capture scène<small>Admin · mode dashboard</small></span>
+            <div class="phone">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page">
+                    <div class="capture-banner glass">
+                      <div>
+                        <div class="capture-banner__text">Capture · Soirée</div>
+                        <div class="capture-banner__sub">2 lumières sélectionnées</div>
+                      </div>
+                      <span class="capture-banner__btn">Tout ✓</span>
+                    </div>
+                    <div class="tiles">
+                      <div class="tile glass tile--warm tile--selected"><span class="tile__name">Plafond</span></div>
+                      <div class="tile glass tile--blue tile--selected"><span class="tile__name">Couloir</span></div>
+                      <div class="tile glass"><span class="tile__name">Chambre</span></div>
+                      <div class="tile glass tile--animating"><span class="tile__name">Ruban</span></div>
+                    </div>
+                    <div class="fab">Capturer l'état</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scenes -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Scènes<small>Activation + bordure active</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient" style="background:radial-gradient(ellipse 80% 60% at 50% 80%, rgba(255,160,80,0.28), transparent 65%), radial-gradient(ellipse 55% 45% at 82% 22%, var(--lumi-ambient-2), transparent 62%)"></div>
+                  <div class="page">
+                    <header class="bar glass"><span class="bar__logo">Scènes</span><span>☰</span></header>
+                    <div class="scene-list">
+                      <div class="scene glass scene--active">
+                        <div><div class="scene__name">Soirée</div><div class="scene__meta">4 appareils · active</div></div>
+                        <span>▶</span>
+                      </div>
+                      <div class="scene glass">
+                        <div><div class="scene__name">Film</div><div class="scene__meta">3 appareils</div></div>
+                        <span>▶</span>
+                      </div>
+                      <div class="scene glass">
+                        <div><div class="scene__name">Nuit</div><div class="scene__meta">6 appareils</div></div>
+                        <span>▶</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sheet LUMI -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Sheet LUMI<small>Couleur · Animation</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page page--dim" style="padding-bottom:0">
+                    <div class="tiles"><div class="tile glass tile--warm"></div></div>
+                  </div>
+                  <div class="overlay">
+                    <div class="overlay__backdrop"></div>
+                    <div class="sheet glass">
+                      <div class="sheet__handle"></div>
+                      <div class="sheet__title">Ruban salon</div>
+                      <div class="segments glass">
+                        <span class="seg seg--on">Couleur</span>
+                        <span class="seg">Animation</span>
+                      </div>
+                      <div class="wheel"></div>
+                      <div style="font-size:0.58rem;color:var(--lumi-text-muted);margin-bottom:6px">Luminosité · Couleur</div>
+                      <div class="slider"><div class="slider__fill"></div></div>
+                      <div class="slider"><div class="slider__fill slider__fill--one"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sheet HUE -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Sheet Hue<small>Sans onglet Animation</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="overlay">
+                    <div class="overlay__backdrop"></div>
+                    <div class="sheet glass">
+                      <div class="sheet__handle"></div>
+                      <div class="sheet__title">Plafond salon</div>
+                      <div class="wheel"></div>
+                      <div style="font-size:0.58rem;color:var(--lumi-text-muted);margin-bottom:6px">Luminosité</div>
+                      <div class="slider"><div class="slider__fill"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Drawer -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Navigation<small>Drawer · bordure accent</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page page--dim"><header class="bar glass"><span class="bar__logo">Lumi</span></header></div>
+                  <div class="scrim"></div>
+                  <nav class="drawer-mini glass">
+                    <div style="padding:0 12px 10px;font-family:var(--font-display);font-weight:700;font-size:0.9rem">Lumi</div>
+                    <div class="drawer-item drawer-item--on">◈ Dashboard</div>
+                    <div class="drawer-item">◇ Scènes</div>
+                    <div class="drawer-item">◷ Déclencheurs</div>
+                    <div style="font-size:0.55rem;color:var(--lumi-text-muted);padding:8px 12px;opacity:0.7">ADMIN</div>
+                    <div class="drawer-item">◎ Appareils</div>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- System states -->
+    <section class="panel">
+      <div class="panel__head">
+        <span class="panel__title">États système</span>
+        <span class="panel__sub">Loading · Erreur · Vide · Dégradé</span>
+      </div>
+      <div class="panel__body">
+        <div class="states-row">
+
+          <!-- Loading / skeleton -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Chargement<small>Skeleton · première sync SSE</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page">
+                    <header class="bar glass">
+                      <span class="bar__logo">Lumi</span>
+                      <span style="opacity:0.6">☰</span>
+                    </header>
+                    <p class="sec-title">Lumières</p>
+                    <div class="tiles">
+                      <div class="tile glass tile--skeleton">
+                        <div class="skeleton skeleton-line skeleton-line--name"></div>
+                        <div class="skeleton skeleton-line skeleton-line--state" style="margin-top:auto"></div>
+                      </div>
+                      <div class="tile glass tile--skeleton">
+                        <div class="skeleton skeleton-line skeleton-line--name"></div>
+                        <div class="skeleton skeleton-line skeleton-line--state" style="margin-top:auto"></div>
+                      </div>
+                      <div class="tile glass tile--skeleton">
+                        <div class="skeleton skeleton-line skeleton-line--name"></div>
+                        <div class="skeleton skeleton-line skeleton-line--state" style="margin-top:auto"></div>
+                      </div>
+                      <div class="tile glass tile--skeleton">
+                        <div class="skeleton skeleton-line skeleton-line--name"></div>
+                        <div class="skeleton skeleton-line skeleton-line--state" style="margin-top:auto"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error (bridge unreachable) -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Erreur<small>Bridge injoignable · retry</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page">
+                    <header class="bar glass">
+                      <span class="bar__logo">Lumi</span>
+                      <span style="opacity:0.6">☰</span>
+                    </header>
+                    <div class="state-card glass state-card--error">
+                      <span class="state-card__icon">⚠</span>
+                      <span class="state-card__title">Bridge injoignable</span>
+                      <span class="state-card__sub">Vérifie que le pont est allumé et sur le même réseau.</span>
+                      <span class="state-card__btn">Réessayer</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Vide<small>Aucune scène · premier usage</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page">
+                    <header class="bar glass">
+                      <span class="bar__logo">Scènes</span>
+                      <span style="opacity:0.6">☰</span>
+                    </header>
+                    <div class="state-card glass">
+                      <span class="state-card__icon">◇</span>
+                      <span class="state-card__title">Aucune scène</span>
+                      <span class="state-card__sub">Règle tes lumières puis capture l'état pour créer une scène.</span>
+                      <span class="state-card__btn">Capturer une scène</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Degraded + toast -->
+          <div class="phone-item">
+            <span class="phone-item__cap">Dégradé<small>Device hors ligne · commande échouée</small></span>
+            <div class="phone phone--short">
+              <div class="phone__notch"></div>
+              <div class="phone__screen">
+                <div class="lumi">
+                  <div class="lumi__bg"></div>
+                  <div class="lumi__ambient"></div>
+                  <div class="page">
+                    <header class="bar glass">
+                      <span class="bar__logo">Lumi</span>
+                      <span style="opacity:0.6">☰</span>
+                    </header>
+                    <div class="offline-banner glass">
+                      <span class="offline-banner__dot"></span>
+                      <span class="offline-banner__text">1 appareil hors ligne</span>
+                    </div>
+                    <div class="tiles" style="margin-bottom:10px">
+                      <div class="tile glass tile--warm"><span class="tile__name">Plafond</span><span class="tile__state">72%</span></div>
+                      <div class="tile glass tile--offline tile--blue"><span class="tile__name">Couloir</span><span class="tile__state">Hors ligne</span></div>
+                    </div>
+                    <div class="toast glass">
+                      <span class="offline-banner__dot"></span>
+                      <span class="toast__text">Échec — Couloir n'a pas répondu</span>
+                      <span class="toast__action">Réessayer</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Principles -->
+    <section class="panel">
+      <div class="panel__head">
+        <span class="panel__title">Principes v1</span>
+        <span class="panel__sub">docs/frontend.md</span>
+      </div>
+      <div class="panel__body">
+        <div class="principles">
+          <div class="principle"><strong>Bordure = état</strong>Tuile ON, nav active, scène active, tuile capture — même langage accent/couleur.</div>
+          <div class="principle"><strong>Canvas live</strong>Fond multicolore depuis devices allumés (SSE). Shift à l'activation de scène.</div>
+          <div class="principle"><strong>Sheet, pas route</strong>Tap tuile → bottom sheet. Toggle + slider restent inline.</div>
+          <div class="principle"><strong>LUMI vs Hue</strong>Un composant sheet — Animation masquée pour Hue, 1 slider luminosité.</div>
+          <div class="principle"><strong>Capture</strong>Régler lumières → dashboard mode capture → FAB. Pas de wizard isolé.</div>
+          <div class="principle"><strong>Accessibilité</strong>prefers-reduced-motion → bordures fixes. reduced-transparency → verre opaque.</div>
+          <div class="principle"><strong>États système</strong>Skeleton au chargement, carte erreur + retry, empty actionnable, banner + toast en dégradé.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Moodboard Lumi · spec <code>docs/frontend.md</code>
+  </footer>
+
+</body>
+</html>
