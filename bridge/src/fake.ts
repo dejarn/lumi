@@ -1,6 +1,6 @@
 import { DeviceKind, Protocol } from "@prisma/client"
 import Fastify from "fastify"
-import { db, dbPing, getDevice, writeLightState } from "./state.js"
+import { db, dbPing, getDevice, writeLightState, writeSensorState } from "./state.js"
 
 type CommandBody =
   | { type: "setPower"; on: boolean }
@@ -10,6 +10,35 @@ type CommandBody =
   | { type: "stopAnimation" }
 
 type ZoneBody = { zone: number }
+type SensorBody = { active: boolean }
+
+let sensorSimInterval: ReturnType<typeof setInterval> | null = null
+
+async function flipAllSensors(): Promise<void> {
+  const sensors = await db.device.findMany({
+    where: { kind: DeviceKind.SENSOR },
+    select: { id: true, sensorActive: true },
+  })
+  if (sensors.length === 0) return
+
+  await Promise.all(
+    sensors.map((s) => writeSensorState(s.id, !s.sensorActive)),
+  )
+}
+
+function startSensorSimulator(ms: number, log: (msg: string) => void): void {
+  if (sensorSimInterval) return
+  log(`sensor simulator enabled (interval ${ms}ms)`)
+  sensorSimInterval = setInterval(() => {
+    flipAllSensors().catch((err) => console.error("[fake] sensor sim tick failed:", err))
+  }, ms)
+}
+
+function stopSensorSimulator(): void {
+  if (!sensorSimInterval) return
+  clearInterval(sensorSimInterval)
+  sensorSimInterval = null
+}
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -194,6 +223,46 @@ async function main() {
   app.post("/discover", async (req, reply) => {
     req.log.info("discover requested (no-op in fake-bridge)")
     return reply.code(202).send({ ok: true })
+  })
+
+  app.post("/fake/sensor/:deviceId", async (req, reply) => {
+    const { deviceId } = req.params as { deviceId: string }
+    const device = await getDevice(deviceId)
+    if (!device) {
+      return reply.code(404).send({ error: "Device not found" })
+    }
+
+    const body = req.body as SensorBody
+    if (typeof body?.active !== "boolean") {
+      return reply.code(400).send({ error: "Invalid active" })
+    }
+
+    try {
+      await writeSensorState(deviceId, body.active)
+    } catch (err) {
+      req.log.error(err, "writeSensorState failed")
+      return reply.code(500).send({ error: "Failed to write state" })
+    }
+
+    return reply.code(200).send({ ok: true })
+  })
+
+  const fakeSensorMs = Number(process.env.FAKE_SENSOR_MS ?? 0)
+  if (fakeSensorMs > 0) {
+    startSensorSimulator(fakeSensorMs, (msg) => app.log.info(msg))
+  }
+
+  const shutdown = async (signal: string) => {
+    app.log.info(`received ${signal}, shutting down`)
+    stopSensorSimulator()
+    await app.close()
+    process.exit(0)
+  }
+
+  process.on("SIGINT", () => void shutdown("SIGINT"))
+  process.on("SIGTERM", () => void shutdown("SIGTERM"))
+  app.addHook("onClose", async () => {
+    stopSensorSimulator()
   })
 
   await app.listen({ port: bridgePort, host: "0.0.0.0" })
