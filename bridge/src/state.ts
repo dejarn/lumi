@@ -11,7 +11,7 @@ export const db = new PrismaClient({ adapter })
 
 async function notify(deviceUuid: string): Promise<void> {
   // NOTIFY payload is the device UUID PK. The SSE handler reads the row and pushes a patch.
-  await db.$queryRaw`SELECT pg_notify('device_state', ${deviceUuid})`
+  await db.$executeRaw`SELECT pg_notify('device_state', ${deviceUuid})`
 }
 
 async function resolveDeviceUuid(deviceId: string): Promise<string | null> {
