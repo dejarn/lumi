@@ -83,6 +83,8 @@ model Device {
   saturation      Int?
   colorBrightness Int?
   animId          Int?     @default(0)
+  animSpeed       Int?
+  animIntensity   Int?
 
   // Live sensor state (kind = SENSOR)
   sensorActive    Boolean?
