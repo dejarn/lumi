@@ -8,19 +8,24 @@ import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
 import Switch from "@mui/material/Switch"
 import Slider from "@mui/material/Slider"
+import Checkbox from "@mui/material/Checkbox"
 import { useDeviceState } from "@/components/SseProvider"
 import DeviceControlSheet from "@/components/DeviceControlSheet"
-import type { DeviceCommand } from "@/lib/types"
+import { postCommand } from "@/lib/device-command"
 
-async function postCommand(deviceId: string, command: DeviceCommand) {
-  await fetch(`/api/devices/${deviceId}/command`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(command),
-  })
+type DeviceTileProps = {
+  device: Device
+  selectable?: boolean
+  selected?: boolean
+  onToggleSelect?: () => void
 }
 
-export default function DeviceTile({ device }: { device: Device }) {
+export default function DeviceTile({
+  device,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
+}: DeviceTileProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const live = useDeviceState(device.id)
 
@@ -30,17 +35,43 @@ export default function DeviceTile({ device }: { device: Device }) {
   const reachable = live?.reachable ?? device.reachable
   const animId = live?.animId ?? device.animId ?? 0
 
+  const borderColor = selectable && selected ? "primary.main" : power ? "primary.main" : "divider"
+  const glow =
+    selectable && selected
+      ? "inset 0 0 24px rgba(242,180,58,0.28)"
+      : power
+        ? "inset 0 0 24px rgba(242,180,58,0.12)"
+        : "none"
+
   return (
     <>
       <Card
         sx={{
+          position: "relative",
           opacity: reachable ? 1 : 0.45,
           border: "1px solid",
-          borderColor: power ? "primary.main" : "divider",
-          boxShadow: power ? "inset 0 0 24px rgba(242,180,58,0.12)" : "none",
+          borderColor,
+          boxShadow: glow,
         }}
       >
-        <CardActionArea onClick={() => setSheetOpen(true)} sx={{ p: 1.5 }}>
+        {selectable && (
+          <Checkbox
+            checked={selected}
+            onChange={() => onToggleSelect?.()}
+            sx={{
+              position: "absolute",
+              top: 4,
+              right: 4,
+              zIndex: 2,
+              p: 0.5,
+            }}
+            slotProps={{ input: { "aria-label": "Sélectionner" } }}
+          />
+        )}
+        <CardActionArea
+          onClick={() => (selectable ? onToggleSelect?.() : setSheetOpen(true))}
+          sx={{ p: 1.5 }}
+        >
           <Typography variant="subtitle1" noWrap>
             {device.name}
           </Typography>
@@ -70,7 +101,9 @@ export default function DeviceTile({ device }: { device: Device }) {
         </Box>
       </Card>
 
-      <DeviceControlSheet device={device} open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      {!selectable && (
+        <DeviceControlSheet device={device} open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      )}
     </>
   )
 }
