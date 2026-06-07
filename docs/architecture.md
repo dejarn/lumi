@@ -70,7 +70,7 @@ Three protocols are abstracted behind `mqtt-bridge`. Next.js never communicates 
 
 ### lumi-protocol (ESP32)
 
-Binary framing over MQTT. Frame layout: `VER(1) | OPC(1) | DEVICE_ID(2) | SEQ(1) | TOTAL_LEN(2) | PAYLOAD(N) | CRC-16(2)`. Full specification: [`lumi-protocol` repo](../lumi-protocol/spec/v1/protocol.md).
+Binary framing over MQTT. Frame layout: `VER(1) | OPC(1) | DEVICE_ID(2) | SEQ(1) | TOTAL_LEN(2) | PAYLOAD(N) | CRC-16(2)`. Full specification: [`lumi-protocol` repo](https://github.com/dejarn/lumi-protocol/blob/main/spec/v1/protocol.md).
 
 Key behaviors mqtt-bridge implements:
 - Frame encoder/decoder with CRC-16/CCITT (poly `0x1021`, init `0xFFFF`)
@@ -90,7 +90,7 @@ Key behaviors mqtt-bridge implements:
 
 `mqtt-bridge` subscribes to `lumi/device/+/availability`, writes `Device.reachable`, and the SSE stream pushes the change to the dashboard (offline tiles are greyed out).
 
-Because the LUMI `availability` and `state` topics are **retained** (see [lumi-protocol spec](../lumi-protocol/spec/v1/protocol.md)), any third-party MQTT client can passively monitor device presence and state directly off the broker — without going through `mqtt-bridge` or the database.
+Because the LUMI `availability` and `state` topics are **retained** (see [lumi-protocol spec](https://github.com/dejarn/lumi-protocol/blob/main/spec/v1/protocol.md)), any third-party MQTT client can passively monitor device presence and state directly off the broker — without going through `mqtt-bridge` or the database.
 
 ## Real-time
 

@@ -73,7 +73,7 @@ A single table covers all three protocols. The internal `id` is a UUID; `externa
 | `brightness` | `Int?` | Master dimmer 0–255 (lumi-protocol `BRIGHTNESS`). |
 | `hue` | `Int?` | 0–65535 (lumi-protocol `H`). |
 | `saturation` | `Int?` | 0–255 (`S`). |
-| `colorBrightness` | `Int?` | 0–255 — brightness **component of the color** (`B`), orthogonal to `brightness`. See protocol [Brightness model](../lumi-protocol/spec/v1/protocol.md). |
+| `colorBrightness` | `Int?` | 0–255 — brightness **component of the color** (`B`), orthogonal to `brightness`. See protocol [Brightness model](https://github.com/dejarn/lumi-protocol/blob/main/spec/v1/protocol.md). |
 | `animId` | `Int?` | `@default(0)`. Running animation, 0 = none. |
 
 **Live sensor state** (populated when `kind = SENSOR`, else null):

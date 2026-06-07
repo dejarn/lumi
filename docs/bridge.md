@@ -2,7 +2,7 @@
 
 _Last updated: 2026-06-05_
 
-`mqtt-bridge` is the service that connects Lumi to the physical devices. Next.js never talks to a device directly — it calls this service over an internal HTTP API, and this service owns every protocol connection. It is a thin orchestrator on top of the `lumi-protocol` **`bridge/node`** library (see [lumi-protocol/docs/api.md](../lumi-protocol/docs/api.md)); the library does the framing/CRC/ACK, this service does the wiring, the HTTP surface, and the database I/O.
+`mqtt-bridge` is the service that connects Lumi to the physical devices. Next.js never talks to a device directly — it calls this service over an internal HTTP API, and this service owns every protocol connection. It is a thin orchestrator on top of the `lumi-protocol` **`bridge/node`** library (see [lumi-protocol/docs/api.md](https://github.com/dejarn/lumi-protocol/blob/main/docs/api.md)); the library does the framing/CRC/ACK, this service does the wiring, the HTTP surface, and the database I/O.
 
 ## Why a separate service
 
@@ -71,7 +71,7 @@ Every inbound device event is written to PostgreSQL, the single source of truth:
 
 ### Animation parameters
 
-`STATE_REPORT` reports `animId` but **not** the `speed` / `intensity` that were sent with `SET_ANIMATION` (a v1 protocol constraint — see [lumi-protocol api.md](../lumi-protocol/docs/api.md)). The bridge owns those values when it issues the command, so it persists them itself when writing the resulting state. Next.js reads them back from the DB; they are not recovered from the device.
+`STATE_REPORT` reports `animId` but **not** the `speed` / `intensity` that were sent with `SET_ANIMATION` (a v1 protocol constraint — see [lumi-protocol api.md](https://github.com/dejarn/lumi-protocol/blob/main/docs/api.md)). The bridge owns those values when it issues the command, so it persists them itself when writing the resulting state. Next.js reads them back from the DB; they are not recovered from the device.
 
 ### Reachability
 

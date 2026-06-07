@@ -94,7 +94,7 @@ Devices are **auto-discovered** — `mqtt-bridge` upserts them into the DB from 
 { "type": "animation",  "animId": 2, "speed": 128, "intensity": 200 }
 { "type": "stopAnimation" }
 ```
-- Field ranges match the protocol (`hue` 0–65535, the rest 0–255). See [lumi-protocol spec](../lumi-protocol/spec/v1/protocol.md).
+- Field ranges match the protocol (`hue` 0–65535, the rest 0–255). See [lumi-protocol spec](https://github.com/dejarn/lumi-protocol/blob/main/spec/v1/protocol.md).
 - Only valid on `kind = LIGHT`. `422` on a `SENSOR`.
 - Returns `202 Accepted` — the confirmed state arrives via SSE.
 
