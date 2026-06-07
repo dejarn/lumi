@@ -65,7 +65,8 @@ const theme = createTheme({
         },
         body: {
           background:
-            "radial-gradient(circle at 15% 0%, rgba(242,180,58,0.07) 0%, transparent 38%), radial-gradient(circle at 85% 100%, rgba(94,194,160,0.05) 0%, transparent 42%), #0B0D12",
+            "radial-gradient(circle at 50% 50%, var(--lumi-ambient, transparent) 0%, transparent 60%), radial-gradient(circle at 15% 0%, rgba(242,180,58,0.07) 0%, transparent 38%), radial-gradient(circle at 85% 100%, rgba(94,194,160,0.05) 0%, transparent 42%), #0B0D12",
+          transition: "background 600ms ease",
         },
       },
     },
