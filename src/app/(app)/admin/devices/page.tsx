@@ -1,9 +1,9 @@
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
 import List from "@mui/material/List"
-import ListItem from "@mui/material/ListItem"
-import ListItemText from "@mui/material/ListItemText"
 import { prisma } from "@/lib/prisma"
+import AdminDevicesHeader from "@/components/AdminDevicesHeader"
+import AdminDeviceRow from "@/components/AdminDeviceRow"
 
 // Devices are auto-discovered — no create. Rename, set zone (LUMI), remove,
 // trigger a discovery sweep (docs/frontend.md, docs/api.md).
@@ -12,15 +12,13 @@ export default async function AdminDevicesPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Typography variant="h5">Appareils</Typography>
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="h5">Appareils</Typography>
+        <AdminDevicesHeader />
+      </Box>
       <List>
         {devices.map((device) => (
-          <ListItem key={device.id} divider>
-            <ListItemText
-              primary={device.name}
-              secondary={`${device.protocol} · ${device.kind} · ${device.reachable ? "en ligne" : "hors ligne"}`}
-            />
-          </ListItem>
+          <AdminDeviceRow key={device.id} device={device} />
         ))}
       </List>
       {devices.length === 0 && (
