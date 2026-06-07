@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import { NextRequest, NextResponse } from "next/server"
+import { requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
 
 type Params = { params: Promise<{ token: string }> }
@@ -15,4 +16,14 @@ export async function GET(_req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invite expired or already used" }, { status: 410 })
   }
   return NextResponse.json({ role: invite.role, expiresAt: invite.expiresAt })
+}
+
+// DELETE /api/invites/[token] — revoke a pending invite by id (ADMIN).
+export async function DELETE(_req: NextRequest, { params }: Params) {
+  const auth = await requireAdmin()
+  if (isResponse(auth)) return auth
+
+  const { token: id } = await params
+  await prisma.invite.delete({ where: { id } })
+  return new NextResponse(null, { status: 204 })
 }
