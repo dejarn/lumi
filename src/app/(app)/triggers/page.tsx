@@ -3,13 +3,30 @@ import Typography from "@mui/material/Typography"
 import List from "@mui/material/List"
 import ListItem from "@mui/material/ListItem"
 import ListItemText from "@mui/material/ListItemText"
+import Divider from "@mui/material/Divider"
 import { prisma } from "@/lib/prisma"
+import { getSession } from "@/lib/get-session"
+import TriggerForm from "@/components/TriggerForm"
 
 export default async function TriggersPage() {
-  const triggers = await prisma.trigger.findMany({
-    include: { scene: true },
-    orderBy: { name: "asc" },
-  })
+  const session = await getSession()
+  const isAdmin = session?.user.role === "ADMIN"
+
+  const [triggers, scenes, sensorDevices] = await Promise.all([
+    prisma.trigger.findMany({
+      include: { scene: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.scene.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.device.findMany({
+      where: { kind: "SENSOR" },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ])
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -28,6 +45,14 @@ export default async function TriggersPage() {
         <Typography variant="body2" color="text.secondary">
           Aucun déclencheur.
         </Typography>
+      )}
+
+      {isAdmin && (
+        <>
+          <Divider />
+          <Typography variant="h6">Nouveau déclencheur</Typography>
+          <TriggerForm scenes={scenes} sensorDevices={sensorDevices} />
+        </>
       )}
     </Box>
   )
