@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma": "prisma",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "bridge:fake": "pnpm --filter mqtt-bridge dev:fake"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

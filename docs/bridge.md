@@ -102,3 +102,45 @@ Next.js SSE handler: LISTEN device_state
 - **Boot**: connect MQTT + Hue, hydrate `DeviceRegistry` from PostgreSQL, subscribe to `lumi/device/+/state`, `lumi/device/+/availability`, `lumi/discovery/announce`, and the Zigbee2MQTT topics.
 - **MQTT drop**: mqtt.js auto-reconnects; retained `availability` + `state` topics mean the registry re-syncs to the last known device states on resubscribe.
 - **Best-effort**: like triggers, command delivery is best-effort. A failed command rejects its own request; it does not retry indefinitely or block others. Partial scene failures are tolerated (one unreachable light does not abort the rest).
+
+---
+
+## Local dev: fake-bridge
+
+For local development without hardware, `bridge/src/fake.ts` is a drop-in HTTP server that mirrors the internal API above. It applies commands by writing desired state directly to PostgreSQL and issuing `NOTIFY device_state` — no MQTT, Hue, or Zigbee connections. The same command → DB → NOTIFY → SSE → UI path runs end-to-end.
+
+**Do not run fake-bridge and the real bridge on the same `BRIDGE_PORT` at once.**
+
+### Quick start
+
+```bash
+cp .env.example .env          # localhost Postgres + BRIDGE_TOKEN
+pnpm prisma migrate dev       # apply migrations
+pnpm db:seed                  # seed dev devices
+pnpm dev                      # Next.js (terminal 1)
+pnpm bridge:fake              # fake-bridge (terminal 2)
+# optional sensor simulator:
+# FAKE_SENSOR_MS=15000 pnpm bridge:fake
+```
+
+Requires `DATABASE_URL`, `BRIDGE_TOKEN`, and `BRIDGE_PORT` (defaults to `4000`). `MQTT_URL` and `HUE_BRIDGE_IP` are not used.
+
+### Endpoints
+
+All routes except `/health` require the `x-bridge-token` header matching `BRIDGE_TOKEN`.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Liveness — DB reachable (`broker` is always `true`). |
+| `POST` | `/command/:deviceId` | Apply a light command to Postgres (LUMI only; Hue returns `501`). |
+| `POST` | `/zone/:deviceId` | LUMI only — set `Device.zone`. Body `{ "zone": 2 }`. |
+| `POST` | `/discover` | No-op (`202`) — no hardware to discover. |
+| `POST` | `/fake/sensor/:deviceId` | Dev-only — set sensor state. Body `{ "active": true }`. |
+
+### Flags
+
+| Env var | Purpose |
+|---|---|
+| `BRIDGE_PORT` | Listen port (shared with real bridge; default `4000`). |
+| `BRIDGE_TOKEN` | Shared secret for `x-bridge-token` header. |
+| `FAKE_SENSOR_MS` | When set (≥5000 recommended), periodically flips every `SENSOR` device's `sensorActive` via `writeSensorState` + NOTIFY. Unset or `0` = disabled. |
