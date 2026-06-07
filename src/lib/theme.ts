@@ -1,59 +1,76 @@
 "use client"
 
 import { createTheme } from "@mui/material/styles"
+import { colors, radii, glass, ambientBackground } from "@/lib/tokens"
 
 // Lumi design language: dark, multicolour ambient canvas, saturated glass,
-// luminous amber accents (docs/design.md, docs/frontend.md). Tokens prefixed --lumi-*.
+// luminous amber accents (docs/design.md, docs/frontend.md). Tokens prefixed --lumi-*
+// and centralised in src/lib/tokens.ts.
 const theme = createTheme({
   palette: {
     mode: "dark",
     background: {
-      default: "#0B0D12",
-      paper: "#14171F",
+      default: colors.bgBase,
+      paper: colors.surface,
     },
     primary: {
-      main: "#F2B43A",
-      contrastText: "#0B0D12",
+      main: colors.accent,
+      contrastText: "#0b0d12",
     },
     secondary: {
-      main: "#8A93A6",
+      main: "#8a93a6",
     },
     error: {
-      main: "#E06A6A",
+      main: colors.error,
     },
     success: {
-      main: "#5EC2A0",
+      main: "#5ecf8a",
     },
     text: {
-      primary: "#EEF1F7",
-      secondary: "#8A93A6",
+      primary: colors.text,
+      secondary: colors.textMuted,
     },
-    divider: "rgba(242,180,58,0.15)",
+    divider: colors.glassBorder,
   },
   typography: {
     fontFamily: "'DM Sans', sans-serif",
-    h1: { fontFamily: "'Bricolage Grotesque', sans-serif" },
-    h2: { fontFamily: "'Bricolage Grotesque', sans-serif" },
-    h3: { fontFamily: "'Bricolage Grotesque', sans-serif" },
-    h4: { fontFamily: "'Bricolage Grotesque', sans-serif" },
-    h5: { fontFamily: "'Bricolage Grotesque', sans-serif" },
-    h6: { fontFamily: "'Bricolage Grotesque', sans-serif" },
+    h1: { fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.04em" },
+    h2: { fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" },
+    h3: { fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" },
+    h4: { fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" },
+    h5: { fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.03em" },
+    h6: { fontFamily: "'Bricolage Grotesque', sans-serif", letterSpacing: "-0.02em" },
   },
   shape: {
-    borderRadius: 14,
+    borderRadius: radii.sm,
   },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         ":root": {
-          "--lumi-background": "#0B0D12",
-          "--lumi-surface": "#14171F",
-          "--lumi-surface-raised": "#1B1F29",
-          "--lumi-accent": "#F2B43A",
-          "--lumi-accent-muted": "rgba(242,180,58,0.15)",
-          "--lumi-text-primary": "#EEF1F7",
-          "--lumi-text-secondary": "#8A93A6",
-          "--lumi-glass-blur": "blur(12px) saturate(130%)",
+          "--lumi-bg-base": colors.bgBase,
+          "--lumi-glass-bg": colors.glassBg,
+          "--lumi-glass-border": colors.glassBorder,
+          "--lumi-glass-blur": glass.blur,
+          "--lumi-accent": colors.accent,
+          "--lumi-accent-dim": colors.accentDim,
+          "--lumi-text": colors.text,
+          "--lumi-text-muted": colors.textMuted,
+          "--lumi-glow-warm": colors.glowWarm,
+          "--lumi-glow-blue": colors.glowBlue,
+          "--lumi-glow-sensor": colors.glowSensor,
+          "--lumi-error": colors.error,
+          "--lumi-scrim": colors.scrim,
+          "--lumi-radius-md": `${radii.md}px`,
+          "--lumi-radius-sm": `${radii.sm}px`,
+          "--lumi-radius-xs": `${radii.xs}px`,
+        },
+        // Opaque glass when the user asks for reduced transparency (docs/design.md a11y).
+        "@media (prefers-reduced-transparency: reduce)": {
+          ":root": {
+            "--lumi-glass-bg": colors.surface,
+            "--lumi-glass-blur": "none",
+          },
         },
         "@media (prefers-reduced-motion: reduce)": {
           "*, *::before, *::after": {
@@ -64,15 +81,42 @@ const theme = createTheme({
           },
         },
         body: {
-          background:
-            "radial-gradient(circle at 50% 50%, var(--lumi-ambient, transparent) 0%, transparent 60%), radial-gradient(circle at 15% 0%, rgba(242,180,58,0.07) 0%, transparent 38%), radial-gradient(circle at 85% 100%, rgba(94,194,160,0.05) 0%, transparent 42%), #0B0D12",
+          background: ambientBackground,
+          backgroundAttachment: "fixed",
           transition: "background 600ms ease",
+          minHeight: "100vh",
+        },
+        // Signature motions (docs/design.md §Motion), referenced by name from sx.
+        "@keyframes border-rainbow": {
+          "0%": { borderColor: "rgba(255,120,100,0.55)" },
+          "33%": { borderColor: "rgba(120,230,160,0.55)" },
+          "66%": { borderColor: "rgba(100,160,255,0.55)" },
+          "100%": { borderColor: "rgba(255,120,100,0.55)" },
+        },
+        "@keyframes wave-scroll": {
+          to: { backgroundPosition: "200% 0" },
+        },
+        "@keyframes skeleton-shimmer": {
+          to: { backgroundPosition: "-200% 0" },
         },
       },
     },
     MuiPaper: {
       styleOverrides: {
         root: { backgroundImage: "none" },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "var(--lumi-glass-bg)",
+          backgroundImage: "none",
+          border: "1px solid var(--lumi-glass-border)",
+          borderRadius: "var(--lumi-radius-md)",
+          backdropFilter: "var(--lumi-glass-blur)",
+          WebkitBackdropFilter: "var(--lumi-glass-blur)",
+          boxShadow: "none",
+        },
       },
     },
     MuiButton: {
@@ -88,17 +132,22 @@ const theme = createTheme({
     MuiDrawer: {
       styleOverrides: {
         paper: {
-          backgroundColor: "#14171F",
-          borderRight: "1px solid rgba(242,180,58,0.15)",
+          backgroundColor: "var(--lumi-glass-bg)",
+          backgroundImage: "none",
+          backdropFilter: "var(--lumi-glass-blur)",
+          WebkitBackdropFilter: "var(--lumi-glass-blur)",
+          borderRight: `1px solid ${colors.accentDim}`,
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: "#14171F",
+          backgroundColor: "var(--lumi-glass-bg)",
           backgroundImage: "none",
-          borderBottom: "1px solid rgba(242,180,58,0.15)",
+          backdropFilter: "var(--lumi-glass-blur)",
+          WebkitBackdropFilter: "var(--lumi-glass-blur)",
+          borderBottom: `1px solid ${colors.accentDim}`,
           boxShadow: "none",
         },
       },

@@ -7,6 +7,7 @@ import Divider from "@mui/material/Divider"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/get-session"
 import TriggerForm from "@/components/TriggerForm"
+import StateCard from "@/components/ui/StateCard"
 
 export default async function TriggersPage() {
   const session = await getSession()
@@ -31,20 +32,19 @@ export default async function TriggersPage() {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography variant="h5">Déclencheurs</Typography>
-      <List>
-        {triggers.map((trigger) => (
-          <ListItem key={trigger.id} divider>
-            <ListItemText
-              primary={trigger.name}
-              secondary={`${trigger.type} → ${trigger.scene.name}${trigger.enabled ? "" : " (désactivé)"}`}
-            />
-          </ListItem>
-        ))}
-      </List>
-      {triggers.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          Aucun déclencheur.
-        </Typography>
+      {triggers.length === 0 ? (
+        <StateCard icon="◷" title="Aucun déclencheur" />
+      ) : (
+        <List>
+          {triggers.map((trigger) => (
+            <ListItem key={trigger.id} divider>
+              <ListItemText
+                primary={trigger.name}
+                secondary={`${trigger.type} → ${trigger.scene.name}${trigger.enabled ? "" : " (désactivé)"}`}
+              />
+            </ListItem>
+          ))}
+        </List>
       )}
 
       {isAdmin && (

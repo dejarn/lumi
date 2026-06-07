@@ -116,18 +116,33 @@ export default function DeviceControlSheet({
       slotProps={{
         paper: {
           sx: {
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
+            borderTopLeftRadius: "var(--lumi-radius-md)",
+            borderTopRightRadius: "var(--lumi-radius-md)",
             borderTop: "1px solid",
             borderColor: "primary.main",
-            backgroundColor: "background.paper",
+            backgroundColor: "var(--lumi-glass-bg)",
+            backdropFilter: "var(--lumi-glass-blur)",
+            WebkitBackdropFilter: "var(--lumi-glass-blur)",
             backgroundImage: "none",
             maxHeight: "85vh",
           },
         },
+        backdrop: {
+          sx: { backgroundColor: "var(--lumi-scrim)", backdropFilter: "blur(6px)" },
+        },
       }}
     >
       <Box sx={{ p: 2, pb: 4 }}>
+        <Box
+          sx={{
+            width: 32,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor: "rgba(255,255,255,0.2)",
+            mx: "auto",
+            mb: 1.5,
+          }}
+        />
         <Typography variant="h6" gutterBottom>
           {device.name}
         </Typography>

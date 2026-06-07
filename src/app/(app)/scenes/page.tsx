@@ -16,6 +16,7 @@ export default async function ScenesPage() {
 
   const scenesWithColor = scenes.map((scene) => ({
     scene: { id: scene.id, name: scene.name, createdAt: scene.createdAt },
+    deviceCount: scene.sceneDevices.length,
     averageColor: averageColor(
       scene.sceneDevices.map((d) => ({
         hue: d.hue,
@@ -29,11 +30,6 @@ export default async function ScenesPage() {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Typography variant="h5">Scènes</Typography>
       <ScenesGrid scenes={scenesWithColor} isAdmin={isAdmin} />
-      {scenesWithColor.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          Aucune scène. Les admins peuvent en créer.
-        </Typography>
-      )}
     </Box>
   )
 }

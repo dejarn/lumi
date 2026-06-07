@@ -8,6 +8,10 @@ import Typography from "@mui/material/Typography"
 import Alert from "@mui/material/Alert"
 import DeviceTile from "@/components/DeviceTile"
 import CaptureBar from "@/components/CaptureBar"
+import SkeletonTile from "@/components/ui/SkeletonTile"
+import OfflineBanner from "@/components/ui/OfflineBanner"
+import Toast from "@/components/ui/Toast"
+import { useDeviceStates, useSseConnected } from "@/components/SseProvider"
 
 type DashboardClientProps = {
   lights: Device[]
@@ -16,6 +20,17 @@ type DashboardClientProps = {
   captureSceneId: string | null
 }
 
+const sectionTitleSx = {
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.08em",
+  fontSize: "0.7rem",
+  fontWeight: 600,
+  color: "text.secondary",
+  mb: 1,
+}
+
+const gridSx = { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.5 }
+
 export default function DashboardClient({
   lights,
   sensors,
@@ -23,10 +38,17 @@ export default function DashboardClient({
   captureSceneId,
 }: DashboardClientProps) {
   const router = useRouter()
+  const connected = useSseConnected()
+  const liveStates = useDeviceStates()
   const [captureMode, setCaptureMode] = useState(Boolean(captureSceneId))
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [capturing, setCapturing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+
+  const offlineCount = lights.filter(
+    (d) => !(liveStates[d.id]?.reachable ?? d.reachable),
+  ).length
 
   const lightIds = lights.map((d) => d.id)
   const allSelected = lightIds.length > 0 && lightIds.every((id) => selectedIds.has(id))
@@ -38,6 +60,10 @@ export default function DashboardClient({
       else next.add(deviceId)
       return next
     })
+  }, [])
+
+  const handleCommandError = useCallback((name: string) => {
+    setToast(`Échec — ${name} n'a pas répondu`)
   }, [])
 
   function handleToggleMode(enabled: boolean) {
@@ -79,6 +105,8 @@ export default function DashboardClient({
   }
 
   const showCaptureBar = isAdmin && Boolean(captureSceneId)
+  // Skeletons until the stream's first sync (docs/design.md §System states).
+  const loading = !connected && !captureMode
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -97,43 +125,50 @@ export default function DashboardClient({
         </>
       )}
 
-      <section>
-        <Typography variant="h5" gutterBottom>
-          Lumières
-        </Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.5 }}>
-          {lights.map((device) => (
-            <DeviceTile
-              key={device.id}
-              device={device}
-              selectable={showCaptureBar && captureMode}
-              selected={selectedIds.has(device.id)}
-              onToggleSelect={() => toggleSelect(device.id)}
-            />
-          ))}
-          {lights.length === 0 && (
+      {!captureMode && <OfflineBanner count={offlineCount} />}
+
+      <Box component="section">
+        <Typography sx={sectionTitleSx}>Lumières</Typography>
+        <Box sx={gridSx}>
+          {loading ? (
+            Array.from({ length: Math.max(lights.length, 2) }).map((_, i) => (
+              <SkeletonTile key={i} />
+            ))
+          ) : lights.length > 0 ? (
+            lights.map((device) => (
+              <DeviceTile
+                key={device.id}
+                device={device}
+                selectable={showCaptureBar && captureMode}
+                selected={selectedIds.has(device.id)}
+                onToggleSelect={() => toggleSelect(device.id)}
+                onCommandError={handleCommandError}
+              />
+            ))
+          ) : (
             <Typography variant="body2" color="text.secondary">
               Aucune lumière détectée.
             </Typography>
           )}
         </Box>
-      </section>
+      </Box>
 
-      <section>
-        <Typography variant="h5" gutterBottom>
-          Capteurs
-        </Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.5 }}>
-          {sensors.map((device) => (
-            <DeviceTile key={device.id} device={device} />
-          ))}
-          {sensors.length === 0 && (
+      <Box component="section">
+        <Typography sx={sectionTitleSx}>Capteurs</Typography>
+        <Box sx={gridSx}>
+          {loading ? (
+            <SkeletonTile />
+          ) : sensors.length > 0 ? (
+            sensors.map((device) => <DeviceTile key={device.id} device={device} />)
+          ) : (
             <Typography variant="body2" color="text.secondary">
               Aucun capteur détecté.
             </Typography>
           )}
         </Box>
-      </section>
+      </Box>
+
+      <Toast open={toast !== null} message={toast ?? ""} onClose={() => setToast(null)} />
     </Box>
   )
 }

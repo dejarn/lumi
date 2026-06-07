@@ -54,7 +54,10 @@ export default function AppShell({
           <IconButton edge="start" color="inherit" onClick={() => setOpen(true)} sx={{ mr: 1 }}>
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          <Typography
+            variant="h6"
+            sx={{ flexGrow: 1, fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 700, letterSpacing: "-0.03em" }}
+          >
             Lumi
           </Typography>
         </Toolbar>
@@ -69,6 +72,16 @@ export default function AppShell({
                 component={Link}
                 href={item.href}
                 selected={pathname.startsWith(item.href)}
+                sx={{
+                  mx: 1,
+                  borderRadius: "var(--lumi-radius-sm)",
+                  borderLeft: "2px solid transparent",
+                  "&.Mui-selected": {
+                    borderLeftColor: "var(--lumi-accent-dim)",
+                    backgroundColor: "rgba(240,168,74,0.06)",
+                    boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
+                  },
+                }}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.label} />

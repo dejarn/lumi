@@ -1,12 +1,12 @@
 "use client"
 
-import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
 import FormControlLabel from "@mui/material/FormControlLabel"
 import Checkbox from "@mui/material/Checkbox"
 import Switch from "@mui/material/Switch"
 import Fab from "@mui/material/Fab"
 import CameraAltIcon from "@mui/icons-material/CameraAlt"
+import GlassSurface from "@/components/ui/GlassSurface"
 
 type CaptureBarProps = {
   captureMode: boolean
@@ -28,7 +28,8 @@ export default function CaptureBar({
   capturing,
 }: CaptureBarProps) {
   return (
-    <Box
+    <GlassSurface
+      glow="accent"
       sx={{
         position: "sticky",
         top: 8,
@@ -39,12 +40,6 @@ export default function CaptureBar({
         flexWrap: "wrap",
         px: 2,
         py: 1.5,
-        borderRadius: 2,
-        border: "1px solid",
-        borderColor: "primary.main",
-        backgroundColor: "rgba(20, 23, 31, 0.72)",
-        backdropFilter: "var(--lumi-glass-blur)",
-        WebkitBackdropFilter: "var(--lumi-glass-blur)",
       }}
     >
       <FormControlLabel
@@ -86,6 +81,6 @@ export default function CaptureBar({
           </Fab>
         </>
       )}
-    </Box>
+    </GlassSurface>
   )
 }

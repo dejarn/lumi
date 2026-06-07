@@ -11,10 +11,12 @@ import DialogContent from "@mui/material/DialogContent"
 import DialogActions from "@mui/material/DialogActions"
 import TextField from "@mui/material/TextField"
 import SceneCard from "@/components/SceneCard"
+import StateCard from "@/components/ui/StateCard"
 
 export type SceneWithColor = {
   scene: Scene
   averageColor: string
+  deviceCount: number
 }
 
 type ScenesGridProps = {
@@ -56,17 +58,28 @@ export default function ScenesGrid({ scenes, isAdmin }: ScenesGridProps) {
         </Box>
       )}
 
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.5 }}>
-        {scenes.map(({ scene, averageColor }) => (
-          <SceneCard
-            key={scene.id}
-            scene={scene}
-            averageColor={averageColor}
-            active={activeSceneId === scene.id}
-            onActivate={setActiveSceneId}
-          />
-        ))}
-      </Box>
+      {scenes.length === 0 ? (
+        <StateCard
+          icon="◇"
+          title="Aucune scène"
+          description="Règle tes lumières puis capture l'état pour créer une scène."
+          actionLabel={isAdmin ? "Nouvelle scène" : undefined}
+          onAction={isAdmin ? () => setCreateOpen(true) : undefined}
+        />
+      ) : (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          {scenes.map(({ scene, averageColor, deviceCount }) => (
+            <SceneCard
+              key={scene.id}
+              scene={scene}
+              averageColor={averageColor}
+              deviceCount={deviceCount}
+              active={activeSceneId === scene.id}
+              onActivate={setActiveSceneId}
+            />
+          ))}
+        </Box>
+      )}
 
       {isAdmin && scenes.length > 0 && (
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
