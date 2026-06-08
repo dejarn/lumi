@@ -6,13 +6,25 @@ import type { DeviceCommand } from "@/lib/types"
 
 type Params = { params: Promise<{ id: string }> }
 
+export const runtime = "nodejs"
+
+function resolveDeviceId(req: NextRequest, paramId: string | undefined): string {
+  const fromParams = paramId?.trim()
+  if (fromParams) return fromParams
+  const fromPath = req.nextUrl.pathname.match(/\/api\/devices\/([^/]+)\/command\/?$/)?.[1]
+  return fromPath?.trim() ?? ""
+}
+
 // POST /api/devices/[id]/command — control a light (USER). Returns 202; the
 // confirmed state arrives via SSE. 422 on a SENSOR. Best-effort (CLAUDE.md rule 2).
 export async function POST(req: NextRequest, { params }: Params) {
   const auth = await requireUser()
   if (isResponse(auth)) return auth
 
-  const { id } = await params
+  const { id: paramId } = await params
+  const id = resolveDeviceId(req, paramId)
+  if (!id) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
   const device = await prisma.device.findUnique({ where: { id } })
   if (!device) return NextResponse.json({ error: "Not found" }, { status: 404 })
   if (device.kind !== "LIGHT") {

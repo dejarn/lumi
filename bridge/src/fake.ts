@@ -62,16 +62,19 @@ function parseCommand(body: unknown): CommandBody | null {
   const { type } = body as { type: string }
 
   switch (type) {
+    case "power":
     case "setPower": {
       const { on } = body as { on?: unknown }
       if (typeof on !== "boolean") return null
       return { type: "setPower", on }
     }
+    case "brightness":
     case "setBrightness": {
       const { brightness } = body as { brightness?: unknown }
       if (!isByte(brightness)) return null
       return { type: "setBrightness", brightness }
     }
+    case "color":
     case "setColor": {
       const { hue, saturation, brightness } = body as {
         hue?: unknown
@@ -81,6 +84,7 @@ function parseCommand(body: unknown): CommandBody | null {
       if (!isHue(hue) || !isByte(saturation) || !isByte(brightness)) return null
       return { type: "setColor", hue, saturation, brightness }
     }
+    case "animation":
     case "setAnimation": {
       const { animId, speed, intensity } = body as {
         animId?: unknown
