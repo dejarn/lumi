@@ -17,10 +17,17 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Zone is LUMI-only" }, { status: 422 })
   }
 
-  const { zone } = await req.json()
-  if (!Number.isInteger(zone)) return NextResponse.json({ error: "Invalid zone" }, { status: 400 })
+  const body = await req.json().catch(() => null)
+  if (body === null) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  const { zone } = body
+  if (!Number.isInteger(zone) || zone < 0 || zone > 255) {
+    return NextResponse.json({ error: "Invalid zone" }, { status: 400 })
+  }
 
   const res = await setZone(id, zone)
-  if (!res.ok) return NextResponse.json({ error: "Bridge error" }, { status: 502 })
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({ error: "Bridge error" }))
+    return NextResponse.json(errBody, { status: res.status })
+  }
   return new NextResponse(null, { status: 202 })
 }
