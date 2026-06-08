@@ -65,14 +65,11 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`
 }
 
-/**
- * Warm vs cool glow for a lit bulb, from its API hue (0–65535).
- * Cool (blue) for the blue/cyan/violet arc (~150°–290°), warm otherwise.
- * Used to drive the luminous tile border (docs/design.md: border = state).
- */
-export function glowForHue(apiHue: number): "warm" | "blue" {
+/** Readable border tint from API hue alone (sat/value clamped for dark UI). */
+export function tileTint(apiHue: number, alpha = 0.55): string {
   const deg = ((apiHue / 65535) * 360 + 360) % 360
-  return deg >= 150 && deg <= 290 ? "blue" : "warm"
+  const [r, g, b] = hsvToRgb(deg, 0.6, 0.95)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 export function apiHsvToHex(c: ApiHsv): string {

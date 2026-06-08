@@ -53,12 +53,14 @@ No MUI default blue. Glass is **saturated**: `backdrop-filter: blur(12px) satura
 
 ## Design language — border = state
 
-One rule, applied everywhere: **the luminous border carries state.** Same accent/colour vocabulary across the whole app.
+One rule, applied everywhere: **the luminous border carries state.**
+
+**App chrome** (nav active item, FAB, active scene card, capture-selected tile) stays **warm amber** (`--lumi-accent`). **Device tint** is local to a powered, reachable light tile — border and inline controls, not global chrome.
 
 | Element | Border signal |
 |---|---|
-| Device tile ON | Warm or blue glow + inset glow, colour follows the bulb |
-| Device tile animating (`animId > 0`) | Cycling rainbow border + `Animation · {name}` label + wave bar |
+| Device tile ON | Luminous border tinted to the bulb's real hue (saturation and brightness clamped for legibility) + inset glow. Inline controls (switch, brightness slider) take the device colour accent in fixed-colour mode (powered and reachable, not animating). |
+| Device tile animating (`power && animId > 0`) | Cycling rainbow border + `Animation · {name}` label + wave bar — animation visuals only while the device is on (`animId` may persist in state after power off). Switch reverts to app amber accent; brightness slider hidden. |
 | Device tile OFF | Default glass border, no glow |
 | Device tile offline | Default border, `opacity 0.4` + grayscale + explicit `Hors ligne` label |
 | Sensor active | Green sensor glow |

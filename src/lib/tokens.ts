@@ -50,3 +50,12 @@ export const glowStyle: Record<GlowKind, { borderColor: string; boxShadow: strin
   accent: { borderColor: colors.accentDim, boxShadow: "inset 0 0 14px rgba(240,168,74,0.10)" },
   none: { borderColor: colors.glassBorder, boxShadow: "none" },
 }
+
+/** Hue-derived tile glow from a `tileTint()` rgba string. */
+export function tileGlowSx(tint: string): { borderColor: string; boxShadow: string } {
+  const inset = tint.replace(/,\s*[\d.]+\)$/, ", 0.10)")
+  return {
+    borderColor: tint,
+    boxShadow: `inset 0 0 14px ${inset}`,
+  }
+}

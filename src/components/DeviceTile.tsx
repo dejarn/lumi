@@ -11,9 +11,9 @@ import Slider from "@mui/material/Slider"
 import Checkbox from "@mui/material/Checkbox"
 import { useDeviceState } from "@/components/SseProvider"
 import { postCommand } from "@/lib/device-command"
-import { glowForHue } from "@/lib/color"
+import { tileTint } from "@/lib/color"
 import { LUMI_EFFECTS } from "@/lib/animations"
-import { glowStyle } from "@/lib/tokens"
+import { glowStyle, tileGlowSx } from "@/lib/tokens"
 
 type DeviceTileProps = {
   device: Device
@@ -52,21 +52,31 @@ export default function DeviceTile({
   const animId = live?.animId ?? device.animId ?? 0
   const sensorActive = live?.sensorActive ?? device.sensorActive ?? false
 
-  const animating = !isSensor && animId > 0
+  const animating = !isSensor && power && animId > 0
   const brightnessPct = Math.round((brightness / 255) * 100)
 
-  const glow: keyof typeof glowStyle =
+  const tint = !isSensor && power && reachable ? tileTint(hue) : undefined
+
+  const glowSx =
     selectable && selected
-      ? "accent"
+      ? glowStyle.accent
       : isSensor
         ? sensorActive
-          ? "sensor"
-          : "none"
-        : power
-          ? glowForHue(hue)
-          : "none"
+          ? glowStyle.sensor
+          : glowStyle.none
+        : tint
+          ? tileGlowSx(tint)
+          : glowStyle.none
 
-  const glowSx = glowStyle[glow]
+  const tintedControlSx =
+    tint && !animating
+      ? {
+          "& .Mui-checked": { color: tint },
+          "& .MuiSwitch-track": { backgroundColor: tint },
+          "& .MuiSlider-thumb": { color: tint },
+          "& .MuiSlider-track": { color: tint },
+        }
+      : undefined
 
   const stateLabel = !reachable
     ? "Hors ligne"
@@ -137,6 +147,7 @@ export default function DeviceTile({
             disabled={!reachable}
             onChange={(e) => void runCommand({ type: "power", on: e.target.checked })}
             slotProps={{ input: { "aria-label": `${device.name} alimentation` } }}
+            sx={tintedControlSx}
           />
           {!animating && (
             <Slider
@@ -149,6 +160,7 @@ export default function DeviceTile({
               onChangeCommitted={(_, value) =>
                 void runCommand({ type: "brightness", brightness: value as number })
               }
+              sx={tintedControlSx}
             />
           )}
         </Box>
