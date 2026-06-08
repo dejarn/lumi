@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { Client } from "pg"
-import { auth } from "@/lib/auth"
+import { requireUser, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
 import type { DeviceStatePatch } from "@/lib/types"
 
@@ -12,37 +12,69 @@ export const dynamic = "force-dynamic"
 // this handler holds a dedicated PG connection doing `LISTEN device_state`, reads
 // the row, and pushes a `device-state` patch (docs/bridge.md, docs/api.md#stream-sse).
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session) return new Response("Unauthorized", { status: 401 })
+  const user = await requireUser()
+  if (isResponse(user)) return user
 
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
     async start(controller) {
+      const client = new Client({ connectionString: process.env.DATABASE_URL })
+      let keepAlive: ReturnType<typeof setInterval> | undefined
+      let cleaned = false
+
+      const cleanup = async () => {
+        if (cleaned) return
+        cleaned = true
+        if (keepAlive) clearInterval(keepAlive)
+        await client.end().catch(() => {})
+        try {
+          controller.close()
+        } catch {
+          /* already closed */
+        }
+      }
+
       const send = (patch: DeviceStatePatch) => {
         controller.enqueue(encoder.encode(`event: device-state\ndata: ${JSON.stringify(patch)}\n\n`))
       }
 
-      const client = new Client({ connectionString: process.env.DATABASE_URL })
-      await client.connect()
-      await client.query("LISTEN device_state")
+      try {
+        await client.connect()
+        await client.query("LISTEN device_state")
 
-      client.on("notification", async (msg) => {
-        const deviceId = msg.payload
-        if (!deviceId) return
-        const device = await prisma.device.findUnique({ where: { id: deviceId } })
-        if (!device) return
-        send(toPatch(device))
-      })
+        client.on("notification", (msg) => {
+          void (async () => {
+            try {
+              const deviceId = msg.payload
+              if (!deviceId) return
+              const device = await prisma.device.findUnique({ where: { id: deviceId } })
+              if (!device) return
+              send(toPatch(device))
+            } catch (err) {
+              console.error("[stream] notification handler error", err)
+            }
+          })()
+        })
 
-      // Keep-alive comment every 25s so proxies don't drop the connection.
-      const keepAlive = setInterval(() => controller.enqueue(encoder.encode(": ping\n\n")), 25_000)
+        client.on("error", (err) => {
+          console.error("[stream] PG client error", err)
+          void cleanup()
+        })
 
-      req.signal.addEventListener("abort", async () => {
-        clearInterval(keepAlive)
+        client.on("end", () => {
+          void cleanup()
+        })
+
+        keepAlive = setInterval(() => controller.enqueue(encoder.encode(": ping\n\n")), 25_000)
+
+        req.signal.addEventListener("abort", () => {
+          void cleanup()
+        })
+      } catch (err) {
         await client.end().catch(() => {})
-        controller.close()
-      })
+        controller.error(err)
+      }
     },
   })
 
@@ -74,5 +106,7 @@ function toPatch(device: NonNullable<DeviceRow>): DeviceStatePatch {
     saturation: device.saturation ?? undefined,
     colorBrightness: device.colorBrightness ?? undefined,
     animId: device.animId ?? undefined,
+    animSpeed: device.animSpeed ?? undefined,
+    animIntensity: device.animIntensity ?? undefined,
   }
 }
