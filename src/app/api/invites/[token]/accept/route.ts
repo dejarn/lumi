@@ -32,7 +32,13 @@ export async function POST(req: NextRequest, { params }: Params) {
   const hashedPassword = await bcrypt.hash(password, 12)
   try {
     const user = await prisma.$transaction(async (tx) => {
-      await tx.invite.update({ where: { id: invite.id }, data: { usedAt: new Date() } })
+      const consumed = await tx.invite.updateMany({
+        where: { id: invite.id, usedAt: null, expiresAt: { gt: new Date() } },
+        data: { usedAt: new Date() },
+      })
+      if (consumed.count !== 1) {
+        throw new InviteGoneError()
+      }
       return tx.user.create({
         data: { username: cleanUsername, hashedPassword, role: invite.role },
         select: { id: true, username: true, role: true },
@@ -40,9 +46,19 @@ export async function POST(req: NextRequest, { params }: Params) {
     })
     return NextResponse.json(user, { status: 201 })
   } catch (err: unknown) {
+    if (err instanceof InviteGoneError) {
+      return NextResponse.json({ error: "Invite expired or already used" }, { status: 410 })
+    }
     if (typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002") {
       return NextResponse.json({ error: "Username already taken" }, { status: 409 })
     }
     throw err
+  }
+}
+
+class InviteGoneError extends Error {
+  constructor() {
+    super("invite gone")
+    this.name = "InviteGoneError"
   }
 }
