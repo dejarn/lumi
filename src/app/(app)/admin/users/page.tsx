@@ -1,11 +1,12 @@
 import Box from "@mui/material/Box"
-import Typography from "@mui/material/Typography"
 import List from "@mui/material/List"
-import Divider from "@mui/material/Divider"
 import { prisma } from "@/lib/prisma"
 import AdminUserRow from "@/components/AdminUserRow"
 import AdminInviteRow from "@/components/AdminInviteRow"
 import InviteDialog from "@/components/InviteDialog"
+import PageHeader from "@/components/ui/PageHeader"
+import PageSection from "@/components/ui/PageSection"
+import StateCard from "@/components/ui/StateCard"
 
 // List users, issue invites, change role, set active:false to cut off a departed
 // flatmate instantly (docs/api.md#users).
@@ -23,30 +24,27 @@ export default async function AdminUsersPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Typography variant="h5">Utilisateurs</Typography>
-        <InviteDialog />
-      </Box>
+      <PageHeader title="Utilisateurs" action={<InviteDialog />} />
 
-      <List>
-        {users.map((user) => (
-          <AdminUserRow key={user.id} user={user} />
-        ))}
-      </List>
+      <PageSection glow="accent">
+        <List>
+          {users.map((user) => (
+            <AdminUserRow key={user.id} user={user} />
+          ))}
+        </List>
+      </PageSection>
 
-      <Divider />
-
-      <Typography variant="h6">Invitations</Typography>
-      <List>
-        {invites.map((invite) => (
-          <AdminInviteRow key={invite.id} invite={invite} />
-        ))}
-      </List>
-      {invites.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          Aucune invitation.
-        </Typography>
-      )}
+      <PageSection label="Invitations" glow="accent">
+        {invites.length === 0 ? (
+          <StateCard variant="empty" icon="✉" title="Aucune invitation" />
+        ) : (
+          <List>
+            {invites.map((invite) => (
+              <AdminInviteRow key={invite.id} invite={invite} />
+            ))}
+          </List>
+        )}
+      </PageSection>
     </Box>
   )
 }

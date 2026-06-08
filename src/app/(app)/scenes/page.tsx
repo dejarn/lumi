@@ -1,9 +1,10 @@
 import Box from "@mui/material/Box"
-import Typography from "@mui/material/Typography"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/get-session"
 import { averageColor } from "@/lib/color"
 import ScenesGrid from "@/components/ScenesGrid"
+import PageHeader from "@/components/ui/PageHeader"
+import PageSection from "@/components/ui/PageSection"
 
 export default async function ScenesPage() {
   const session = await getSession()
@@ -28,8 +29,10 @@ export default async function ScenesPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Typography variant="h5">Scènes</Typography>
-      <ScenesGrid scenes={scenesWithColor} isAdmin={isAdmin} />
+      <PageHeader title="Scènes" />
+      <PageSection>
+        <ScenesGrid scenes={scenesWithColor} isAdmin={isAdmin} />
+      </PageSection>
     </Box>
   )
 }

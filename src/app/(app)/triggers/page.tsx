@@ -1,10 +1,10 @@
 import Box from "@mui/material/Box"
-import Typography from "@mui/material/Typography"
-import Divider from "@mui/material/Divider"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/get-session"
 import TriggerForm from "@/components/TriggerForm"
 import TriggerList from "@/components/TriggerList"
+import PageHeader from "@/components/ui/PageHeader"
+import PageSection from "@/components/ui/PageSection"
 import StateCard from "@/components/ui/StateCard"
 
 export default async function TriggersPage() {
@@ -29,19 +29,19 @@ export default async function TriggersPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Typography variant="h5">Déclencheurs</Typography>
-      {triggers.length === 0 ? (
-        <StateCard icon="◷" title="Aucun déclencheur" />
-      ) : (
-        <TriggerList triggers={triggers} />
-      )}
+      <PageHeader title="Déclencheurs" />
+      <PageSection>
+        {triggers.length === 0 ? (
+          <StateCard icon="◷" title="Aucun déclencheur" />
+        ) : (
+          <TriggerList triggers={triggers} />
+        )}
+      </PageSection>
 
       {isAdmin && (
-        <>
-          <Divider />
-          <Typography variant="h6">Nouveau déclencheur</Typography>
+        <PageSection label="Nouveau déclencheur">
           <TriggerForm scenes={scenes} sensorDevices={sensorDevices} />
-        </>
+        </PageSection>
       )}
     </Box>
   )

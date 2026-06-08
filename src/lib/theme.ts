@@ -1,7 +1,31 @@
 "use client"
 
 import { createTheme } from "@mui/material/styles"
-import { colors, radii, glass, ambientBackground } from "@/lib/tokens"
+import { colors, radii, glass, ambientBackground, glowStyle } from "@/lib/tokens"
+
+const glassSurface = {
+  backgroundColor: "var(--lumi-glass-bg)",
+  backgroundImage: "none",
+  backdropFilter: "var(--lumi-glass-blur)",
+  WebkitBackdropFilter: "var(--lumi-glass-blur)",
+  border: "1px solid var(--lumi-glass-border)",
+} as const
+
+// Nav highlight pattern from AppShell.tsx — replicated for ListItem hover/selected.
+const listItemInteractive = {
+  "&:hover": {
+    backgroundColor: "rgba(240,168,74,0.06)",
+    boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
+  },
+  "&.Mui-selected": {
+    backgroundColor: "rgba(240,168,74,0.06)",
+    boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
+    "&:hover": {
+      backgroundColor: "rgba(240,168,74,0.06)",
+      boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
+    },
+  },
+} as const
 
 // Lumi design language: dark, multicolour ambient canvas, saturated glass,
 // luminous amber accents (docs/design.md, docs/frontend.md). Tokens prefixed --lumi-*
@@ -149,6 +173,144 @@ const theme = createTheme({
           WebkitBackdropFilter: "var(--lumi-glass-blur)",
           borderBottom: `1px solid ${colors.accentDim}`,
           boxShadow: "none",
+        },
+      },
+    },
+    MuiDialog: {
+      defaultProps: {
+        slotProps: {
+          backdrop: {
+            sx: { backgroundColor: "var(--lumi-scrim)" },
+          },
+        },
+      },
+      styleOverrides: {
+        paper: {
+          ...glassSurface,
+          borderRadius: "var(--lumi-radius-md)",
+          boxShadow: "none",
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "var(--lumi-glass-bg)",
+          backgroundImage: "none",
+          backdropFilter: "var(--lumi-glass-blur)",
+          WebkitBackdropFilter: "var(--lumi-glass-blur)",
+          borderRadius: "var(--lumi-radius-sm)",
+          transition: "box-shadow 0.2s ease, border-color 0.2s ease",
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: colors.accentDim,
+          },
+          "&.Mui-focused": {
+            boxShadow: glowStyle.accent.boxShadow,
+            "& .MuiOutlinedInput-notchedOutline": {
+              borderColor: colors.accent,
+              borderWidth: 1,
+            },
+          },
+        },
+        notchedOutline: {
+          borderColor: "var(--lumi-glass-border)",
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        icon: {
+          color: colors.textMuted,
+        },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          ...glassSurface,
+          borderRadius: "var(--lumi-radius-sm)",
+          boxShadow: "none",
+        },
+      },
+    },
+    MuiPopover: {
+      styleOverrides: {
+        paper: {
+          ...glassSurface,
+          borderRadius: "var(--lumi-radius-sm)",
+          boxShadow: "none",
+        },
+      },
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: listItemInteractive,
+      },
+    },
+    MuiListItemButton: {
+      styleOverrides: {
+        root: listItemInteractive,
+      },
+    },
+    MuiDivider: {
+      styleOverrides: {
+        root: {
+          borderColor: "var(--lumi-glass-border)",
+        },
+      },
+    },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          ...glassSurface,
+          borderRadius: "var(--lumi-radius-sm)",
+        },
+        colorError: {
+          borderColor: colors.error,
+          color: colors.error,
+          "& .MuiAlert-icon": { color: colors.error },
+        },
+        colorSuccess: ({ theme }) => ({
+          borderColor: theme.palette.success.main,
+          color: theme.palette.success.main,
+          "& .MuiAlert-icon": { color: theme.palette.success.main },
+        }),
+      },
+    },
+    MuiToggleButtonGroup: {
+      styleOverrides: {
+        root: {
+          ...glassSurface,
+          borderRadius: "var(--lumi-radius-sm)",
+          gap: 1,
+          padding: 2,
+          "& .MuiToggleButtonGroup-grouped": {
+            border: 0,
+            borderRadius: "var(--lumi-radius-xs) !important",
+            margin: 0,
+          },
+        },
+      },
+    },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          textTransform: "none",
+          color: colors.textMuted,
+          border: "none",
+          "&:hover": {
+            backgroundColor: "rgba(240,168,74,0.06)",
+            boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
+          },
+          "&.Mui-selected": {
+            backgroundColor: "rgba(240,168,74,0.06)",
+            color: colors.accent,
+            borderColor: colors.accentDim,
+            boxShadow: glowStyle.accent.boxShadow,
+            "&:hover": {
+              backgroundColor: "rgba(240,168,74,0.06)",
+            },
+          },
         },
       },
     },

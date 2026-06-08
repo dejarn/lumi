@@ -14,21 +14,13 @@ import StateCard from "@/components/ui/StateCard"
 import OfflineBanner from "@/components/ui/OfflineBanner"
 import Toast from "@/components/ui/Toast"
 import { useDeviceStates, useSseConnected, useSseError, useSseReconnect } from "@/components/SseProvider"
+import { sectionTitleSx } from "@/lib/ui-sx"
 
 type DashboardClientProps = {
   lights: Device[]
   sensors: Device[]
   isAdmin: boolean
   captureSceneId: string | null
-}
-
-const sectionTitleSx = {
-  textTransform: "uppercase" as const,
-  letterSpacing: "0.08em",
-  fontSize: "0.7rem",
-  fontWeight: 600,
-  color: "text.secondary",
-  mb: 1,
 }
 
 const gridSx = { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.5 }
