@@ -2,7 +2,7 @@ import mqtt, { type MqttClient } from "mqtt"
 import { createHueClient } from "./hue.js"
 import { createLumiBridge } from "./lumi.js"
 import { buildServer } from "./server.js"
-import { listLumiDevices } from "./state.js"
+import { db, listLumiDevices } from "./state.js"
 import { setupZigbee } from "./zigbee.js"
 
 const MQTT_CONNECT_TIMEOUT_MS = 10_000
@@ -69,6 +69,9 @@ async function main() {
   log(`connecting to MQTT broker at ${config.mqttUrl}`)
   const mqttClient = mqtt.connect(config.mqttUrl)
 
+  mqttClient.on("reconnect", () => log("MQTT reconnecting"))
+  mqttClient.on("offline", () => log("MQTT offline"))
+
   try {
     await waitForMqttConnect(mqttClient, MQTT_CONNECT_TIMEOUT_MS)
   } catch (err) {
@@ -103,6 +106,17 @@ async function main() {
     hue,
     mqttConnected: () => mqttClient.connected,
   })
+
+  const shutdown = async (signal: string) => {
+    log(`received ${signal}, shutting down`)
+    await app.close()
+    mqttClient.end()
+    await db.$disconnect()
+    process.exit(0)
+  }
+
+  process.on("SIGINT", () => void shutdown("SIGINT"))
+  process.on("SIGTERM", () => void shutdown("SIGTERM"))
 
   await app.listen({ port: config.bridgePort, host: "0.0.0.0" })
   log(`listening on http://0.0.0.0:${config.bridgePort}`)

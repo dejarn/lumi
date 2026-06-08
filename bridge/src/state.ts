@@ -14,6 +14,10 @@ async function notify(deviceUuid: string): Promise<void> {
   await db.$executeRaw`SELECT pg_notify('device_state', ${deviceUuid})`
 }
 
+function warnDeviceNotFound(deviceId: string, scope: string): void {
+  console.warn(JSON.stringify({ scope, msg: "device not found", deviceId }))
+}
+
 async function resolveDeviceUuid(deviceId: string): Promise<string | null> {
   const byPk = await db.device.findUnique({ where: { id: deviceId }, select: { id: true } })
   if (byPk) return byPk.id
@@ -32,7 +36,10 @@ function isUuid(value: string): boolean {
 /** STATE_REPORT (LUMI) / Hue event → Device light columns. `deviceId` = LUMI externalId or UUID. */
 export async function writeLightState(deviceId: string, state: Partial<LumiState>): Promise<void> {
   const id = await resolveDeviceUuid(deviceId)
-  if (!id) return
+  if (!id) {
+    warnDeviceNotFound(deviceId, "writeLightState")
+    return
+  }
 
   const { speed, intensity, ...lightState } = state
   await db.device.update({
@@ -50,7 +57,10 @@ export async function writeLightState(deviceId: string, state: Partial<LumiState
 /** Zigbee2MQTT message → Device.sensorActive. */
 export async function writeSensorState(deviceId: string, active: boolean): Promise<void> {
   const id = await resolveDeviceUuid(deviceId)
-  if (!id) return
+  if (!id) {
+    warnDeviceNotFound(deviceId, "writeSensorState")
+    return
+  }
 
   await db.device.update({
     where: { id },
@@ -69,7 +79,10 @@ export async function writeReachable(deviceId: string, reachable: boolean): Prom
   }
 
   // Hue/Zigbee callers pass UUID; skip if the row is not known yet.
-  if (isUuid(deviceId)) return
+  if (isUuid(deviceId)) {
+    warnDeviceNotFound(deviceId, "writeReachable")
+    return
+  }
 
   // LUMI LWT can arrive before DISCOVERY_ANNOUNCE — create a minimal row.
   const created = await db.device.create({
@@ -84,6 +97,17 @@ export async function writeReachable(deviceId: string, reachable: boolean): Prom
   await notify(created.id)
 }
 
+/** Persist LUMI zone and NOTIFY SSE consumers. */
+export async function writeZone(deviceId: string, zone: number): Promise<void> {
+  const id = await resolveDeviceUuid(deviceId)
+  if (!id) {
+    warnDeviceNotFound(deviceId, "writeZone")
+    return
+  }
+  await db.device.update({ where: { id }, data: { zone } })
+  await notify(id)
+}
+
 /** Boot-time hydration of the LUMI DeviceRegistry. */
 export async function listLumiDevices(): Promise<
   { externalId: string; reachable: boolean; zone: number; protoVersion: number | null }[]
@@ -94,13 +118,13 @@ export async function listLumiDevices(): Promise<
   })
 }
 
-/** DISCOVERY_ANNOUNCE → upsert LUMI row. Does not NOTIFY (no light/sensor state change). */
-export async function upsertDevice(dev: {
+/** DISCOVERY_ANNOUNCE → upsert LUMI row and NOTIFY. */
+export async function upsertAndNotify(dev: {
   externalId: string
   zone?: number
   protoVersion?: number
 }): Promise<void> {
-  await db.device.upsert({
+  const row = await db.device.upsert({
     where: {
       protocol_externalId: { protocol: Protocol.LUMI, externalId: dev.externalId },
     },
@@ -118,9 +142,19 @@ export async function upsertDevice(dev: {
       ...(dev.zone !== undefined && { zone: dev.zone }),
       ...(dev.protoVersion !== undefined && { protoVersion: dev.protoVersion }),
       lastSeen: new Date(),
-      reachable: true,
     },
+    select: { id: true },
   })
+  await notify(row.id)
+}
+
+/** @deprecated Use upsertAndNotify */
+export async function upsertDevice(dev: {
+  externalId: string
+  zone?: number
+  protoVersion?: number
+}): Promise<void> {
+  return upsertAndNotify(dev)
 }
 
 /** HTTP command routing lookup by device PK. */

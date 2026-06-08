@@ -1,13 +1,14 @@
 import { DeviceKind, Protocol } from "@prisma/client"
 import Fastify from "fastify"
-import { db, dbPing, getDevice, writeLightState, writeSensorState } from "./state.js"
-
-type CommandBody =
-  | { type: "setPower"; on: boolean }
-  | { type: "setBrightness"; brightness: number }
-  | { type: "setColor"; hue: number; saturation: number; brightness: number }
-  | { type: "setAnimation"; animId: number; speed: number; intensity: number }
-  | { type: "stopAnimation" }
+import { parseCommand } from "./command.js"
+import {
+  db,
+  dbPing,
+  getDevice,
+  writeLightState,
+  writeSensorState,
+  writeZone,
+} from "./state.js"
 
 type ZoneBody = { zone: number }
 type SensorBody = { active: boolean }
@@ -49,72 +50,6 @@ function requireEnv(name: string): string {
   return value
 }
 
-function isByte(n: unknown): n is number {
-  return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 255
-}
-
-function isHue(n: unknown): n is number {
-  return typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 65535
-}
-
-function parseCommand(body: unknown): CommandBody | null {
-  if (!body || typeof body !== "object" || !("type" in body)) return null
-  const { type } = body as { type: string }
-
-  switch (type) {
-    case "power":
-    case "setPower": {
-      const { on } = body as { on?: unknown }
-      if (typeof on !== "boolean") return null
-      return { type: "setPower", on }
-    }
-    case "brightness":
-    case "setBrightness": {
-      const { brightness } = body as { brightness?: unknown }
-      if (!isByte(brightness)) return null
-      return { type: "setBrightness", brightness }
-    }
-    case "color":
-    case "setColor": {
-      const { hue, saturation, brightness } = body as {
-        hue?: unknown
-        saturation?: unknown
-        brightness?: unknown
-      }
-      if (!isHue(hue) || !isByte(saturation) || !isByte(brightness)) return null
-      return { type: "setColor", hue, saturation, brightness }
-    }
-    case "animation":
-    case "setAnimation": {
-      const { animId, speed, intensity } = body as {
-        animId?: unknown
-        speed?: unknown
-        intensity?: unknown
-      }
-      if (
-        typeof animId !== "number" ||
-        !Number.isInteger(animId) ||
-        typeof speed !== "number" ||
-        !Number.isInteger(speed) ||
-        typeof intensity !== "number" ||
-        !Number.isInteger(intensity)
-      ) {
-        return null
-      }
-      return { type: "setAnimation", animId, speed, intensity }
-    }
-    case "stopAnimation":
-      return { type: "stopAnimation" }
-    default:
-      return null
-  }
-}
-
-async function writeZone(deviceId: string, zone: number): Promise<void> {
-  await db.device.update({ where: { id: deviceId }, data: { zone } })
-  await db.$executeRaw`SELECT pg_notify('device_state', ${deviceId})`
-}
-
 async function main() {
   const token = requireEnv("BRIDGE_TOKEN")
   requireEnv("DATABASE_URL")
@@ -123,7 +58,7 @@ async function main() {
   const app = Fastify({ logger: true })
 
   app.addHook("onRequest", async (req, reply) => {
-    if (req.url === "/health") return
+    if (new URL(req.url, "http://localhost").pathname === "/health") return
     if (req.headers["x-bridge-token"] !== token) {
       reply.code(401).send({ error: "Unauthorized" })
     }
@@ -133,7 +68,7 @@ async function main() {
     const dbOk = await dbPing()
       .then(() => true)
       .catch(() => false)
-    reply.code(200).send({ broker: true, db: dbOk })
+    reply.code(dbOk ? 200 : 503).send({ broker: true, db: dbOk })
   })
 
   app.post("/command/:deviceId", async (req, reply) => {

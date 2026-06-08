@@ -1,15 +1,9 @@
 import { DeviceKind, Protocol } from "@prisma/client"
 import Fastify, { type FastifyInstance } from "fastify"
+import { parseCommand, type CommandBody } from "./command.js"
 import type { HueClient } from "./hue.js"
 import { type LumiBridge, LumiTimeoutError } from "./lumi.js"
 import { dbPing, getDevice } from "./state.js"
-
-type CommandBody =
-  | { type: "setPower"; on: boolean }
-  | { type: "setBrightness"; brightness: number }
-  | { type: "setColor"; hue: number; saturation: number; brightness: number }
-  | { type: "setAnimation"; animId: number; speed: number; intensity: number }
-  | { type: "stopAnimation" }
 
 type ZoneBody = { zone: number }
 
@@ -23,7 +17,7 @@ export function buildServer(deps: {
 
   // Trust boundary: every route except /health requires the shared secret.
   app.addHook("onRequest", async (req, reply) => {
-    if (req.url === "/health") return
+    if (new URL(req.url, "http://localhost").pathname === "/health") return
     if (req.headers["x-bridge-token"] !== token) {
       reply.code(401).send({ error: "Unauthorized" })
     }
@@ -49,39 +43,15 @@ export function buildServer(deps: {
       return reply.code(422).send({ error: "Sensors are read-only" })
     }
 
+    const body = parseCommand(req.body)
+    if (!body) {
+      return reply.code(400).send({ error: "Invalid command body" })
+    }
+
     switch (device.protocol) {
       case Protocol.LUMI: {
-        const body = req.body as CommandBody
         try {
-          switch (body.type) {
-            case "setPower":
-              await deps.lumi.setPower(device.externalId, body.on)
-              break
-            case "setBrightness":
-              await deps.lumi.setBrightness(device.externalId, body.brightness)
-              break
-            case "setColor":
-              await deps.lumi.setColor(
-                device.externalId,
-                body.hue,
-                body.saturation,
-                body.brightness,
-              )
-              break
-            case "setAnimation":
-              await deps.lumi.setAnimation(
-                device.externalId,
-                body.animId,
-                body.speed,
-                body.intensity,
-              )
-              break
-            case "stopAnimation":
-              await deps.lumi.stopAnimation(device.externalId)
-              break
-            default:
-              return reply.code(400).send({ error: "Invalid command type" })
-          }
+          await dispatchLumiCommand(deps.lumi, device.externalId, body)
         } catch (err) {
           if (err instanceof LumiTimeoutError) {
             return reply.code(502).send({ error: "ACK timeout" })
@@ -113,9 +83,19 @@ export function buildServer(deps: {
       return reply.code(422).send({ error: "SET_ZONE is LUMI only" })
     }
 
-    const body = req.body as ZoneBody
+    const zoneBody = req.body as ZoneBody
+    if (
+      !zoneBody ||
+      typeof zoneBody.zone !== "number" ||
+      !Number.isInteger(zoneBody.zone) ||
+      zoneBody.zone < 0 ||
+      zoneBody.zone > 255
+    ) {
+      return reply.code(400).send({ error: "Invalid zone" })
+    }
+
     try {
-      await deps.lumi.setZone(device.externalId, body.zone)
+      await deps.lumi.setZone(device.externalId, zoneBody.zone)
     } catch (err) {
       if (err instanceof LumiTimeoutError) {
         return reply.code(502).send({ error: "ACK timeout" })
@@ -131,4 +111,28 @@ export function buildServer(deps: {
   })
 
   return app
+}
+
+async function dispatchLumiCommand(
+  lumi: LumiBridge,
+  externalId: string,
+  body: CommandBody,
+): Promise<void> {
+  switch (body.type) {
+    case "setPower":
+      await lumi.setPower(externalId, body.on)
+      break
+    case "setBrightness":
+      await lumi.setBrightness(externalId, body.brightness)
+      break
+    case "setColor":
+      await lumi.setColor(externalId, body.hue, body.saturation, body.brightness)
+      break
+    case "setAnimation":
+      await lumi.setAnimation(externalId, body.animId, body.speed, body.intensity)
+      break
+    case "stopAnimation":
+      await lumi.stopAnimation(externalId)
+      break
+  }
 }

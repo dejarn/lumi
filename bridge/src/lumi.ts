@@ -8,7 +8,7 @@ import {
   type LumiDevice,
   type LumiState as ProtocolLumiState,
 } from "lumi-protocol"
-import { upsertDevice, writeLightState, writeReachable } from "./state.js"
+import { upsertAndNotify, writeLightState, writeReachable } from "./state.js"
 
 export { LumiTimeoutError }
 
@@ -72,7 +72,7 @@ export function createLumiBridge(mqttClient: MqttClient): LumiBridge {
 
   client.on("discovery", (dev) => {
     registry.upsert(dev.deviceId, toAnnounce(dev))
-    void upsertDevice({
+    void upsertAndNotify({
       externalId: deviceIdToExternalId(dev.deviceId),
       zone: dev.zoneId,
       protoVersion: dev.protoVersion,
