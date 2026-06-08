@@ -48,6 +48,22 @@ PostgreSQL is the single source of truth for device state. The `mqtt-bridge` ser
 
 ---
 
+### `Invite`
+
+Flatmate onboarding tokens (see `docs/api.md` invites flow).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `String` (UUID) | PK — used by `DELETE /api/invites/[id]` |
+| `tokenHash` | `String` | Unique SHA-256 of the raw invite token |
+| `role` | `Role` | Role granted on accept |
+| `createdById` | `String?` | FK → `User`, `onDelete: SetNull` |
+| `expiresAt` | `DateTime` | Expiry |
+| `usedAt` | `DateTime?` | Set on successful accept |
+| `createdAt` | `DateTime` | Auto |
+
+---
+
 ### `Device`
 
 A single table covers all three protocols. The internal `id` is a UUID; `externalId` holds the protocol-native identifier.
@@ -75,6 +91,8 @@ A single table covers all three protocols. The internal `id` is a UUID; `externa
 | `saturation` | `Int?` | 0–255 (`S`). |
 | `colorBrightness` | `Int?` | 0–255 — brightness **component of the color** (`B`), orthogonal to `brightness`. See protocol [Brightness model](https://github.com/dejarn/lumi-protocol/blob/main/spec/v1/protocol.md). |
 | `animId` | `Int?` | `@default(0)`. Running animation, 0 = none. |
+| `animSpeed` | `Int?` | Animation speed (lumi-protocol); null when no animation. Live state only — not stored on `SceneDevice`. |
+| `animIntensity` | `Int?` | Animation intensity (lumi-protocol); null when no animation. Live state only — not stored on `SceneDevice`. |
 
 **Live sensor state** (populated when `kind = SENSOR`, else null):
 
