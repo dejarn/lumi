@@ -10,6 +10,12 @@ import Button from "@mui/material/Button"
 import Typography from "@mui/material/Typography"
 import Alert from "@mui/material/Alert"
 import Box from "@mui/material/Box"
+import CircularProgress from "@mui/material/CircularProgress"
+
+function safeCallbackUrl(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw
+  return "/dashboard"
+}
 
 function LoginForm() {
   const router = useRouter()
@@ -29,7 +35,7 @@ function LoginForm() {
       setError("Identifiants invalides.")
       return
     }
-    router.push(params.get("callbackUrl") ?? "/dashboard")
+    router.push(safeCallbackUrl(params.get("callbackUrl")))
   }
 
   return (
@@ -66,7 +72,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<CircularProgress />}>
       <LoginForm />
     </Suspense>
   )
