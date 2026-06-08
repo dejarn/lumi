@@ -18,6 +18,8 @@ export type DeviceStatePatch = {
   saturation?: number
   colorBrightness?: number
   animId?: number
+  animSpeed?: number
+  animIntensity?: number
   // sensor field (kind = SENSOR)
   sensorActive?: boolean
 }
