@@ -1,8 +1,7 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import "next-auth/jwt"
-import bcrypt from "bcryptjs"
-import { timingSafeEqual } from "crypto"
+import { authorizeCredentials } from "@/lib/credentials"
 import { prisma } from "@/lib/prisma"
 import type { Role } from "@prisma/client"
 
@@ -11,6 +10,7 @@ const isNextBuild = process.env.NEXT_PHASE === "phase-production-build"
 if (process.env.NODE_ENV === "production" && !isNextBuild) {
   if (!process.env.AUTH_SECRET) throw new Error("AUTH_SECRET must be set in production")
   if (!process.env.ADMIN_PASSWORD) throw new Error("ADMIN_PASSWORD must be set in production")
+  if (!process.env.ADMIN_USERNAME) throw new Error("ADMIN_USERNAME must be set in production")
 }
 
 declare module "next-auth" {
@@ -48,39 +48,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null
-
-        const username = credentials.username as string
-        const password = credentials.password as string
-
-        // First-admin bootstrap from env vars (timing-safe comparison).
-        const usernameMatch = timingSafeEqual(
-          Buffer.from(username),
-          Buffer.from(process.env.ADMIN_USERNAME ?? ""),
+        return authorizeCredentials(
+          credentials.username as string,
+          credentials.password as string,
         )
-        const passwordMatch = timingSafeEqual(
-          Buffer.from(password),
-          Buffer.from(process.env.ADMIN_PASSWORD ?? ""),
-        )
-        if (usernameMatch && passwordMatch) {
-          const admin = await prisma.user.upsert({
-            where: { username },
-            update: {},
-            create: {
-              username,
-              hashedPassword: await bcrypt.hash(password, 12),
-              role: "ADMIN",
-            },
-          })
-          return { id: admin.id, username: admin.username, role: admin.role }
-        }
-
-        const user = await prisma.user.findUnique({ where: { username } })
-        if (!user || !user.active) return null
-
-        const valid = await bcrypt.compare(password, user.hashedPassword)
-        if (!valid) return null
-
-        return { id: user.id, username: user.username, role: user.role }
       },
     }),
   ],
@@ -90,6 +61,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id as string
         token.username = user.username
         token.role = user.role
+      } else if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { username: true, role: true, active: true },
+        })
+        if (!dbUser || !dbUser.active) return token
+        token.username = dbUser.username
+        token.role = dbUser.role
       }
       return token
     },
