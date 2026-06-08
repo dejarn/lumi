@@ -39,8 +39,8 @@ export default function DeviceControlSheet({
   const colorBrightness = live?.colorBrightness ?? device.colorBrightness ?? 255
   const brightness = live?.brightness ?? device.brightness ?? 0
   const animId = live?.animId ?? device.animId ?? 0
-  const animSpeed = device.animSpeed ?? 128
-  const animIntensity = device.animIntensity ?? 128
+  const animSpeed = live?.animSpeed ?? device.animSpeed ?? 128
+  const animIntensity = live?.animIntensity ?? device.animIntensity ?? 128
 
   const apiColor = useMemo(
     () => ({ hue, saturation, colorBrightness }),

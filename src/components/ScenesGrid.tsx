@@ -75,6 +75,7 @@ export default function ScenesGrid({ scenes, isAdmin }: ScenesGridProps) {
               averageColor={averageColor}
               deviceCount={deviceCount}
               active={activeSceneId === scene.id}
+              isAdmin={isAdmin}
               onActivate={setActiveSceneId}
             />
           ))}

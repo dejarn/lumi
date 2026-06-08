@@ -1,12 +1,10 @@
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
-import List from "@mui/material/List"
-import ListItem from "@mui/material/ListItem"
-import ListItemText from "@mui/material/ListItemText"
 import Divider from "@mui/material/Divider"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/get-session"
 import TriggerForm from "@/components/TriggerForm"
+import TriggerList from "@/components/TriggerList"
 import StateCard from "@/components/ui/StateCard"
 
 export default async function TriggersPage() {
@@ -35,16 +33,7 @@ export default async function TriggersPage() {
       {triggers.length === 0 ? (
         <StateCard icon="◷" title="Aucun déclencheur" />
       ) : (
-        <List>
-          {triggers.map((trigger) => (
-            <ListItem key={trigger.id} divider>
-              <ListItemText
-                primary={trigger.name}
-                secondary={`${trigger.type} → ${trigger.scene.name}${trigger.enabled ? "" : " (désactivé)"}`}
-              />
-            </ListItem>
-          ))}
-        </List>
+        <TriggerList triggers={triggers} />
       )}
 
       {isAdmin && (

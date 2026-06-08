@@ -66,28 +66,60 @@ export default function AppShell({
       <Drawer open={open} onClose={() => setOpen(false)}>
         <Box sx={{ width: 260 }} role="presentation" onClick={() => setOpen(false)}>
           <List>
-            {items.map((item) => (
-              <ListItemButton
-                key={item.href}
-                component={Link}
-                href={item.href}
-                selected={pathname.startsWith(item.href)}
-                sx={{
-                  mx: 1,
-                  borderRadius: "var(--lumi-radius-sm)",
-                  borderLeft: "2px solid transparent",
-                  "&.Mui-selected": {
-                    borderLeftColor: "var(--lumi-accent-dim)",
-                    backgroundColor: "rgba(240,168,74,0.06)",
-                    boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
-                  },
-                }}
-              >
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            ))}
+            {items
+              .filter((item) => !item.adminOnly)
+              .map((item) => (
+                <ListItemButton
+                  key={item.href}
+                  component={Link}
+                  href={item.href}
+                  selected={pathname.startsWith(item.href)}
+                  sx={{
+                    mx: 1,
+                    borderRadius: "var(--lumi-radius-sm)",
+                    borderLeft: "2px solid transparent",
+                    "&.Mui-selected": {
+                      borderLeftColor: "var(--lumi-accent-dim)",
+                      backgroundColor: "rgba(240,168,74,0.06)",
+                      boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
+                    },
+                  }}
+                >
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
+              ))}
           </List>
+          {isAdmin && items.some((item) => item.adminOnly) && (
+            <>
+              <Divider sx={{ my: 1 }} />
+              <List>
+                {items
+                  .filter((item) => item.adminOnly)
+                  .map((item) => (
+                    <ListItemButton
+                      key={item.href}
+                      component={Link}
+                      href={item.href}
+                      selected={pathname.startsWith(item.href)}
+                      sx={{
+                        mx: 1,
+                        borderRadius: "var(--lumi-radius-sm)",
+                        borderLeft: "2px solid transparent",
+                        "&.Mui-selected": {
+                          borderLeftColor: "var(--lumi-accent-dim)",
+                          backgroundColor: "rgba(240,168,74,0.06)",
+                          boxShadow: "inset 0 0 10px rgba(240,168,74,0.05)",
+                        },
+                      }}
+                    >
+                      <ListItemIcon>{item.icon}</ListItemIcon>
+                      <ListItemText primary={item.label} />
+                    </ListItemButton>
+                  ))}
+              </List>
+            </>
+          )}
           <Divider />
           <List>
             <ListItemButton onClick={() => signOut({ callbackUrl: "/login" })}>
