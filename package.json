@@ -5,6 +5,7 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "dev": "next dev",
+    "dev:fake": "pnpm -w run \"/^(dev|bridge:fake)$/\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

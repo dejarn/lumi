@@ -50,6 +50,12 @@ const lumiLights: LightSeed[] = [
   },
 ]
 
+/** Fake-bridge dev set — anything else (Hue demo rows, duplicate LUMI, etc.) is removed. */
+const canonicalDevices = [
+  ...lumiLights.map((l) => ({ protocol: Protocol.LUMI, externalId: l.externalId })),
+  { protocol: Protocol.ZIGBEE, externalId: "presence-salon" },
+]
+
 const lightFields = (light: LightSeed) => ({
   name: light.name,
   kind: DeviceKind.LIGHT,
@@ -68,6 +74,14 @@ const lightFields = (light: LightSeed) => ({
 })
 
 async function main() {
+  const [removedTriggers, removedScenes, removedDevices] = await prisma.$transaction([
+    prisma.trigger.deleteMany(),
+    prisma.scene.deleteMany(),
+    prisma.device.deleteMany({
+      where: { NOT: { OR: canonicalDevices } },
+    }),
+  ])
+
   for (const light of lumiLights) {
     const data = lightFields(light)
     await prisma.device.upsert({
@@ -102,7 +116,9 @@ async function main() {
   })
 
   const count = await prisma.device.count()
-  console.log(`Seeded ${lumiLights.length} LUMI lights + 1 ZIGBEE sensor (${count} devices total)`)
+  console.log(
+    `Dev seed: removed ${removedDevices.count} device(s), ${removedScenes.count} scene(s), ${removedTriggers.count} trigger(s); ${count} device(s) now (3 LUMI + 1 sensor).`,
+  )
 }
 
 main()

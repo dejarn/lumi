@@ -116,7 +116,7 @@ For local development without hardware, `bridge/src/fake.ts` is a drop-in HTTP s
 ```bash
 cp .env.example .env          # localhost Postgres + BRIDGE_TOKEN
 pnpm prisma migrate dev       # apply migrations
-pnpm db:seed                  # seed dev devices
+pnpm db:seed                  # reset dev devices (3 LUMI + 1 sensor; drops demo Hue/Zigbee + scenes/triggers)
 pnpm dev                      # Next.js (terminal 1)
 pnpm bridge:fake              # fake-bridge (terminal 2)
 # optional sensor simulator:
