@@ -20,7 +20,7 @@ type LightSeed = {
 const lumiLights: LightSeed[] = [
   {
     name: "Salon strip",
-    externalId: "0x0001",
+    externalId: "0001",
     zone: 1,
     power: true,
     brightness: 200,
@@ -30,7 +30,7 @@ const lumiLights: LightSeed[] = [
   },
   {
     name: "Chambre strip",
-    externalId: "0x0002",
+    externalId: "0002",
     zone: 2,
     power: false,
     brightness: 0,
@@ -40,7 +40,7 @@ const lumiLights: LightSeed[] = [
   },
   {
     name: "Cuisine strip",
-    externalId: "0x0003",
+    externalId: "0003",
     zone: 3,
     power: true,
     brightness: 128,
