@@ -15,6 +15,6 @@ export async function POST(_req: NextRequest, { params }: Params) {
   const scene = await prisma.scene.findUnique({ where: { id }, select: { id: true } })
   if (!scene) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  await activateScene(id)
+  void activateScene(id).catch((e) => console.error("activateScene failed", id, e))
   return new NextResponse(null, { status: 202 })
 }

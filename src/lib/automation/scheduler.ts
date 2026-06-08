@@ -11,28 +11,77 @@ import type { DeviceCommand } from "@/lib/types"
 //   └── PG LISTEN device_state    ← SENSOR triggers
 //
 // v1 has no debounce: a noisy presence sensor fires on every flip.
+// globalThis guard: HMR re-imports this module in dev — close the old PG client first.
 
-let started = false
+const schedulerGlobal = globalThis as typeof globalThis & { __lumiSchedulerStarted?: boolean }
+
 const cronJobs = new Map<string, cron.ScheduledTask>()
 
-/** Boot the scheduler once. Idempotent. */
-export async function startScheduler(): Promise<void> {
-  if (started) return
-  started = true
+let pgClient: Client | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let reconnectDelayMs = 1000
+const MAX_RECONNECT_DELAY_MS = 30_000
 
-  await reloadCronJobs()
-
-  const pgClient = new Client({ connectionString: process.env.DATABASE_URL })
-  await pgClient.connect()
-  await pgClient.query("LISTEN device_state")
-  pgClient.on("notification", (msg) => {
+async function attachPgListener(client: Client): Promise<void> {
+  await client.query("LISTEN device_state")
+  client.on("notification", (msg) => {
     if (msg.channel === "device_state" && msg.payload) {
       onSensorEvent(msg.payload).catch(() => {})
     }
   })
-  pgClient.on("error", (err) => {
-    console.error("[scheduler] PG client error", err)
+  client.on("error", (err) => {
+    console.warn("[scheduler] PG client error", err)
+    schedulePgReconnect()
   })
+  client.on("end", () => {
+    console.warn("[scheduler] PG client ended")
+    schedulePgReconnect()
+  })
+}
+
+async function connectPgListener(): Promise<void> {
+  if (pgClient) {
+    await pgClient.end().catch(() => {})
+    pgClient = null
+  }
+
+  const client = new Client({ connectionString: process.env.DATABASE_URL })
+  await client.connect()
+  await attachPgListener(client)
+  pgClient = client
+  reconnectDelayMs = 1000
+  console.info("[scheduler] PG listener connected")
+}
+
+function schedulePgReconnect(): void {
+  if (reconnectTimer) return
+  const delay = reconnectDelayMs
+  reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS)
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null
+    void connectPgListener().catch((err) => {
+      console.error("[scheduler] PG reconnect failed", err)
+      schedulePgReconnect()
+    })
+  }, delay)
+}
+
+/** Boot the scheduler once. Idempotent (survives dev HMR via globalThis). */
+export async function startScheduler(): Promise<void> {
+  if (schedulerGlobal.__lumiSchedulerStarted) {
+    if (pgClient) {
+      await pgClient.end().catch(() => {})
+      pgClient = null
+    }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+  }
+  schedulerGlobal.__lumiSchedulerStarted = true
+
+  await reloadCronJobs()
+  await connectPgListener()
 }
 
 /**
@@ -50,7 +99,10 @@ export async function reloadCronJobs(): Promise<void> {
   })
 
   for (const trigger of triggers) {
-    if (!trigger.cronExpr || !cron.validate(trigger.cronExpr)) continue
+    if (!trigger.cronExpr || !cron.validate(trigger.cronExpr)) {
+      console.warn(`[scheduler] skipping invalid cronExpr for trigger ${trigger.id}`)
+      continue
+    }
     const job = cron.schedule(trigger.cronExpr, async () => {
       await activateScene(trigger.sceneId)
       await prisma.trigger
@@ -102,13 +154,19 @@ export async function activateScene(sceneId: string): Promise<void> {
   await Promise.all(
     rows.map(async (row) => {
       const commands: DeviceCommand[] = [{ type: "power", on: row.power }]
+      commands.push({ type: "brightness", brightness: row.brightness })
 
       if (row.animId !== 0) {
         // speed/intensity not stored in v1 STATE_REPORT — use defaults
         commands.push({ type: "stopAnimation" })
         commands.push({ type: "animation", animId: row.animId, speed: 128, intensity: 200 })
       } else {
-        commands.push({ type: "color", hue: row.hue, saturation: row.saturation, brightness: row.brightness })
+        commands.push({
+          type: "color",
+          hue: row.hue,
+          saturation: row.saturation,
+          brightness: row.colorBrightness,
+        })
       }
 
       for (const cmd of commands) {
