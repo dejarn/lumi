@@ -1,17 +1,30 @@
+import cron from "node-cron"
 import { NextRequest, NextResponse } from "next/server"
-import { requireAdmin, isResponse } from "@/lib/auth-guard"
+import { requireUser, requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
 import { reloadCronJobs } from "@/lib/automation/scheduler"
 
 type Params = { params: Promise<{ id: string }> }
 
-// PATCH /api/triggers/[id] — partial update, e.g. enable/disable (ADMIN).
+// PATCH /api/triggers/[id] — partial update; USER may toggle enabled only.
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const auth = await requireAdmin()
-  if (isResponse(auth)) return auth
-
   const { id } = await params
-  const body = await req.json()
+  const body = await req.json().catch(() => null)
+  if (body === null) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+
+  const onlyEnabled =
+    typeof body === "object" &&
+    body !== null &&
+    Object.keys(body).length === 1 &&
+    typeof body.enabled === "boolean"
+
+  if (onlyEnabled) {
+    const auth = await requireUser()
+    if (isResponse(auth)) return auth
+  } else {
+    const auth = await requireAdmin()
+    if (isResponse(auth)) return auth
+  }
 
   const existing = await prisma.trigger.findUnique({ where: { id }, select: { type: true } })
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
@@ -32,7 +45,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (body.cronExpr !== undefined) {
       if (typeof body.cronExpr !== "string" || !body.cronExpr.trim())
         return NextResponse.json({ error: "cronExpr must be non-empty" }, { status: 422 })
-      data.cronExpr = body.cronExpr.trim()
+      const expr = body.cronExpr.trim()
+      if (!cron.validate(expr)) {
+        return NextResponse.json({ error: "invalid cronExpr" }, { status: 422 })
+      }
+      data.cronExpr = expr
     }
   } else {
     if (body.cronExpr != null)
@@ -51,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   const trigger = await prisma.trigger.update({ where: { id }, data })
-  await reloadCronJobs()
+  if (existing.type === "CRON") await reloadCronJobs()
   return NextResponse.json(trigger)
 }
 
@@ -61,7 +78,10 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (isResponse(auth)) return auth
 
   const { id } = await params
+  const existing = await prisma.trigger.findUnique({ where: { id }, select: { type: true } })
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
   await prisma.trigger.delete({ where: { id } })
-  await reloadCronJobs()
+  if (existing.type === "CRON") await reloadCronJobs()
   return new NextResponse(null, { status: 204 })
 }

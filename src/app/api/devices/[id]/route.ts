@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
 import { reloadCronJobs } from "@/lib/automation/scheduler"
+import { toDeviceDto } from "@/lib/device-dto"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -13,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params
   const device = await prisma.device.findUnique({ where: { id } })
   if (!device) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  return NextResponse.json(device)
+  return NextResponse.json(toDeviceDto(device))
 }
 
 // PATCH /api/devices/[id] — rename (ADMIN)
@@ -22,12 +24,21 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (isResponse(auth)) return auth
 
   const { id } = await params
-  const { name } = await req.json()
+  const body = await req.json().catch(() => null)
+  if (body === null) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  const { name } = body
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Invalid name" }, { status: 400 })
   }
-  const device = await prisma.device.update({ where: { id }, data: { name: name.trim() } })
-  return NextResponse.json(device)
+  try {
+    const device = await prisma.device.update({ where: { id }, data: { name: name.trim() } })
+    return NextResponse.json(device)
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+    throw e
+  }
 }
 
 // DELETE /api/devices/[id] — remove a stale device (ADMIN)
@@ -36,10 +47,17 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (isResponse(auth)) return auth
 
   const { id } = await params
-  await prisma.$transaction([
-    prisma.trigger.updateMany({ where: { sensorDeviceId: id }, data: { enabled: false } }),
-    prisma.device.delete({ where: { id } }),
-  ])
+  try {
+    await prisma.$transaction([
+      prisma.trigger.updateMany({ where: { sensorDeviceId: id }, data: { enabled: false } }),
+      prisma.device.delete({ where: { id } }),
+    ])
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+    throw e
+  }
   await reloadCronJobs()
   return new NextResponse(null, { status: 204 })
 }

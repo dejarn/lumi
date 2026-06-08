@@ -1,3 +1,4 @@
+import cron from "node-cron"
 import { NextRequest, NextResponse } from "next/server"
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
@@ -18,7 +19,8 @@ export async function POST(req: NextRequest) {
   const auth = await requireAdmin()
   if (isResponse(auth)) return auth
 
-  const body = await req.json()
+  const body = await req.json().catch(() => null)
+  if (body === null) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   const { name, type, sceneId, cronExpr, sensorDeviceId, sensorState, enabled } = body
 
   if (typeof name !== "string" || !name.trim())
@@ -26,9 +28,14 @@ export async function POST(req: NextRequest) {
   if (typeof sceneId !== "string" || !sceneId)
     return NextResponse.json({ error: "sceneId required" }, { status: 422 })
 
+  const scene = await prisma.scene.findUnique({ where: { id: sceneId }, select: { id: true } })
+  if (!scene) return NextResponse.json({ error: "scene not found" }, { status: 404 })
+
   if (type === "CRON") {
     if (typeof cronExpr !== "string" || !cronExpr.trim())
       return NextResponse.json({ error: "cronExpr required for CRON trigger" }, { status: 422 })
+    if (!cron.validate(cronExpr.trim()))
+      return NextResponse.json({ error: "invalid cronExpr" }, { status: 422 })
     if (sensorDeviceId != null || sensorState != null)
       return NextResponse.json({ error: "sensorDeviceId/sensorState not allowed on CRON" }, { status: 422 })
     const trigger = await prisma.trigger.create({
@@ -51,7 +58,6 @@ export async function POST(req: NextRequest) {
     const trigger = await prisma.trigger.create({
       data: { name: name.trim(), type: "SENSOR", sensorDeviceId, sensorState, sceneId, enabled: enabled ?? true },
     })
-    await reloadCronJobs()
     return NextResponse.json(trigger, { status: 201 })
   }
 

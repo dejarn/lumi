@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { Prisma } from "@prisma/client"
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
 
@@ -37,12 +38,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (isResponse(auth)) return auth
 
   const { id } = await params
-  const { name } = await req.json()
+  const body = await req.json().catch(() => null)
+  if (body === null) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  const { name } = body
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Invalid name" }, { status: 400 })
   }
-  const scene = await prisma.scene.update({ where: { id }, data: { name: name.trim() } })
-  return NextResponse.json(scene)
+  try {
+    const scene = await prisma.scene.update({ where: { id }, data: { name: name.trim() } })
+    return NextResponse.json(scene)
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json({ error: "Scene name already exists" }, { status: 409 })
+    }
+    throw e
+  }
 }
 
 // DELETE /api/scenes/[id] (ADMIN) — cascades to SceneDevice + Trigger rows.
@@ -51,6 +64,13 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   if (isResponse(auth)) return auth
 
   const { id } = await params
-  await prisma.scene.delete({ where: { id } })
+  try {
+    await prisma.scene.delete({ where: { id } })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+    throw e
+  }
   return new NextResponse(null, { status: 204 })
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireUser, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
+import { toDeviceDto } from "@/lib/device-dto"
 
 // GET /api/devices — list all devices with current state (USER).
 export async function GET() {
@@ -8,5 +9,5 @@ export async function GET() {
   if (isResponse(auth)) return auth
 
   const devices = await prisma.device.findMany({ orderBy: { name: "asc" } })
-  return NextResponse.json(devices)
+  return NextResponse.json(devices.map(toDeviceDto))
 }
