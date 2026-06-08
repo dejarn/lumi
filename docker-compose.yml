@@ -49,14 +49,19 @@ services:
   zigbee2mqtt:
     image: koenkk/zigbee2mqtt
     restart: unless-stopped
+    environment:
+      ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
+      ZIGBEE2MQTT_CONFIG_MQTT_BASE_TOPIC: zigbee2mqtt
+      ZIGBEE2MQTT_CONFIG_SERIAL_PORT: /dev/ttyACM0
+      ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED: "false"
     volumes:
       - zigbee2mqtt_data:/app/data
     depends_on:
       - mosquitto
     networks:
       - internal
-    # devices:
-    #   - /dev/ttyACM0:/dev/ttyACM0   # CC2652P coordinator dongle
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
     mem_limit: 256m
 
   mqtt-bridge:
@@ -77,6 +82,12 @@ services:
         condition: service_started
     networks:
       - internal
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     mem_limit: 256m
 
   app:
@@ -98,7 +109,7 @@ services:
       migrate:
         condition: service_completed_successfully
       mqtt-bridge:
-        condition: service_started
+        condition: service_healthy
     networks:
       - internal
       - traefik
@@ -109,6 +120,7 @@ services:
       - traefik.http.routers.lumi.entrypoints=websecure
       - traefik.http.routers.lumi.tls=true
       - traefik.http.routers.lumi.tls.certresolver=letsencrypt
+      - traefik.http.routers.lumi.middlewares=lumi-authratelimit@docker
       - traefik.http.services.lumi.loadbalancer.server.port=3000
       # Rate-limit auth endpoints
       - traefik.http.middlewares.lumi-authratelimit.ratelimit.average=10

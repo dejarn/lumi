@@ -19,4 +19,5 @@ jobs:
       - run: pnpm prisma generate
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm --filter mqtt-bridge typecheck
       - run: pnpm test
