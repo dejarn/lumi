@@ -1,14 +1,11 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import type { Device } from "@prisma/client"
 import Box from "@mui/material/Box"
 import Typography from "@mui/material/Typography"
-import Alert from "@mui/material/Alert"
 import DeviceTile from "@/components/DeviceTile"
 import DeviceControlSheet from "@/components/DeviceControlSheet"
-import CaptureBar from "@/components/CaptureBar"
 import SkeletonTile from "@/components/ui/SkeletonTile"
 import StateCard from "@/components/ui/StateCard"
 import OfflineBanner from "@/components/ui/OfflineBanner"
@@ -19,27 +16,15 @@ import { sectionTitleSx } from "@/lib/ui-sx"
 type DashboardClientProps = {
   lights: Device[]
   sensors: Device[]
-  isAdmin: boolean
-  captureSceneId: string | null
 }
 
 const gridSx = { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 1.5 }
 
-export default function DashboardClient({
-  lights,
-  sensors,
-  isAdmin,
-  captureSceneId,
-}: DashboardClientProps) {
-  const router = useRouter()
+export default function DashboardClient({ lights, sensors }: DashboardClientProps) {
   const connected = useSseConnected()
   const sseError = useSseError()
   const reconnect = useSseReconnect()
   const liveStates = useDeviceStates()
-  const [captureMode, setCaptureMode] = useState(Boolean(captureSceneId))
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [capturing, setCapturing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [lastFailedCommand, setLastFailedCommand] = useState<{
     deviceId: string
@@ -51,18 +36,8 @@ export default function DashboardClient({
     (d) => !(liveStates[d.id]?.reachable ?? d.reachable),
   ).length
 
-  const lightIds = lights.map((d) => d.id)
-  const allSelected = lightIds.length > 0 && lightIds.every((id) => selectedIds.has(id))
   const openDevice = lights.find((d) => d.id === openDeviceId) ?? null
-
-  const toggleSelect = useCallback((deviceId: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(deviceId)) next.delete(deviceId)
-      else next.add(deviceId)
-      return next
-    })
-  }, [])
+  const loading = !connected && !sseError
 
   const handleCommandError = useCallback(
     (deviceId: string, name: string, command: Parameters<typeof import("@/lib/device-command").postCommand>[1]) => {
@@ -71,47 +46,6 @@ export default function DashboardClient({
     },
     [],
   )
-
-  function handleToggleMode(enabled: boolean) {
-    setCaptureMode(enabled)
-    setSelectedIds(new Set())
-    setError(null)
-    if (!enabled) {
-      router.push("/dashboard")
-    }
-  }
-
-  function handleSelectAll(checked: boolean) {
-    setSelectedIds(checked ? new Set(lightIds) : new Set())
-  }
-
-  async function handleCapture() {
-    if (!captureSceneId || selectedIds.size === 0) return
-    setCapturing(true)
-    setError(null)
-
-    const res = await fetch(`/api/scenes/${captureSceneId}/capture`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deviceIds: [...selectedIds] }),
-    })
-
-    setCapturing(false)
-
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
-      setError(data.error ?? "Échec de la capture.")
-      return
-    }
-
-    setCaptureMode(false)
-    setSelectedIds(new Set())
-    router.push("/dashboard")
-    router.refresh()
-  }
-
-  const showCaptureBar = isAdmin && Boolean(captureSceneId)
-  const loading = !connected && !captureMode && !sseError
 
   if (sseError && !connected) {
     return (
@@ -127,22 +61,7 @@ export default function DashboardClient({
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {showCaptureBar && (
-        <>
-          <CaptureBar
-            captureMode={captureMode}
-            onToggleMode={handleToggleMode}
-            selectAll={allSelected}
-            onSelectAll={handleSelectAll}
-            selectedCount={selectedIds.size}
-            onCapture={handleCapture}
-            capturing={capturing}
-          />
-          {error && <Alert severity="error">{error}</Alert>}
-        </>
-      )}
-
-      {!captureMode && <OfflineBanner count={offlineCount} />}
+      <OfflineBanner count={offlineCount} />
 
       <Box component="section">
         <Typography sx={sectionTitleSx}>Lumières</Typography>
@@ -156,9 +75,6 @@ export default function DashboardClient({
               <DeviceTile
                 key={device.id}
                 device={device}
-                selectable={showCaptureBar && captureMode}
-                selected={selectedIds.has(device.id)}
-                onToggleSelect={() => toggleSelect(device.id)}
                 onOpen={() => setOpenDeviceId(device.id)}
                 onCommandError={(cmd) => handleCommandError(device.id, device.name, cmd)}
               />

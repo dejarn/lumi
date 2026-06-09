@@ -1,6 +1,6 @@
 # API
 
-_Last updated: 2026-06-05_
+_Last updated: 2026-06-09_
 
 This document covers the **Next.js Route Handlers** — the surface the browser talks to. The internal API between Next.js and `mqtt-bridge` (and the MQTT/protocol behaviour behind it) lives in [bridge.md](bridge.md).
 
@@ -132,17 +132,38 @@ Devices are **auto-discovered** — `mqtt-bridge` upserts them into the DB from 
   "id": "...",
   "name": "Soirée",
   "devices": [
-    { "deviceId": "...", "power": true, "brightness": 120, "hue": 5000, "saturation": 255, "colorBrightness": 180, "animId": 0 }
+    {
+      "deviceId": "...",
+      "power": true,
+      "brightness": 120,
+      "hue": 5000,
+      "saturation": 255,
+      "colorBrightness": 180,
+      "animId": 0,
+      "name": "Salon strip",
+      "reachable": true,
+      "kind": "LIGHT",
+      "current": {
+        "power": true,
+        "brightness": 200,
+        "hue": 32768,
+        "saturation": 255,
+        "colorBrightness": 200,
+        "animId": 0,
+        "animSpeed": 128,
+        "animIntensity": 200
+      }
+    }
   ]
 }
 ```
+- Target fields (`power`, `brightness`, `hue`, …) are the scene's saved `SceneDevice` state. `name`, `reachable`, `kind`, and `current` reflect the device's live DB state (for the `SceneSheet` diff view).
 
 **POST /api/scenes/[id]/capture** body — the lights to snapshot:
 ```json
 { "deviceIds": ["...", "..."] }
 ```
-- Reads each device's **current** state from the DB and writes it as the scene's `SceneDevice` rows (replacing any existing rows for those devices). Simpler than entering target values by hand: set the room how you like it, then capture.
-- Only `LIGHT` devices accepted. A `SENSOR` id → `422`.
+- **Replaces the scene's full membership** with exactly the given `deviceIds` (devices not listed are removed). Reads each selected device's **current** state from the DB and writes it as `SceneDevice` rows. `deviceIds: []` clears the scene. Only `LIGHT` devices accepted; a `SENSOR` id → `422`.
 
 **POST /api/scenes/[id]/activate** — no body. Sends every `SceneDevice` row to the bridge in one fan-out. Best-effort: returns `202` once accepted; resulting device states stream back over SSE. Partial failures (one unreachable device) do not roll back the others.
 

@@ -55,7 +55,7 @@ No MUI default blue. Glass is **saturated**: `backdrop-filter: blur(12px) satura
 
 One rule, applied everywhere: **the luminous border carries state.**
 
-**App chrome** (nav active item, FAB, active scene card, capture-selected tile) stays **warm amber** (`--lumi-accent`). **Device tint** is local to a powered, reachable light tile — border and inline controls, not global chrome.
+**App chrome** (nav active item, FAB, capture-selected tile) stays **warm amber** (`--lumi-accent`). **Device tint** is local to a powered, reachable light tile — border and inline controls, not global chrome.
 
 | Element | Border signal |
 |---|---|
@@ -65,7 +65,6 @@ One rule, applied everywhere: **the luminous border carries state.**
 | Device tile offline | Default border, `opacity 0.4` + grayscale + explicit `Hors ligne` label |
 | Sensor active | Green sensor glow |
 | Nav item active | Amber accent border + inset glow |
-| Scene active | Amber accent border + inset glow |
 | Capture — selected tile | Amber accent border + outline + `✓` |
 
 Because colour alone is not an accessible signal, every state also carries a **text label** (`ON · 72%`, `Hors ligne`, `Animation · …`, `Sélectionné`).
@@ -78,9 +77,9 @@ Restrained, but light _is_ motion here — a few signature animations carry the 
 
 | Moment | Animation |
 |---|---|
-| Ambient canvas | Slowly shifts toward the average colour of devices that are on; transitions ~0.5–1 s on scene activation |
+| Ambient canvas | Slowly shifts toward the average colour of devices that are on |
 | Tile animating | Border cycles through colours (4 s loop); wave bar scrolls (2.5 s loop) |
-| Scene activation | Active card gains luminous border; ambient canvas shifts toward the scene's average colour |
+| Scene activation | Brief ambient pulse (~0.8 s) toward the scene's average colour via `--lumi-ambient`, then neutral — no persistent card border |
 | Bottom sheet | Slides up from bottom, backdrop blur |
 | Drawer | Slides from left over a scrim, dimmed page behind |
 | Skeleton load | Shimmer sweep (1.4 s) on placeholder tiles |
@@ -100,7 +99,7 @@ No animation on form fields, sliders, or standard navigation. SSE state patches 
 - **LUMI**: segmented `Couleur | Animation`. Colour tab = hue wheel + master brightness + colour brightness. Animation tab = effect grid + speed/intensity + stop.
 - **HUE**: Animation tab **hidden**. Colour tab only — wheel + **one** brightness slider.
 
-**Scene card**: name (Bricolage) + meta (`4 appareils · active`). Active scene = luminous accent border. ADMIN: `⋯` menu for rename/delete.
+**Scene card**: name (Bricolage) + meta (`4 appareils`). Tap opens **`SceneSheet`**. ADMIN actions (recapture, rename, delete) live in the sheet.
 
 **Capture banner** (ADMIN dashboard capture mode): glass banner — scene name, selection count, **Tout ✓** (select all). Selectable tiles below, FAB **Capturer l'état** bottom-right.
 
@@ -161,8 +160,8 @@ Tone: **direct, brief, French**. No exclamation marks, no over-friendly language
 
 ### 3. Activate a scene (USER)
 
-1. `/scenes` → tap a scene card.
-2. `POST /activate`. Card gains a luminous border; ambient canvas shifts toward the scene's average colour (~0.5–1 s).
+1. `/scenes` → tap a scene card → `SceneSheet` opens (device list + live state).
+2. **Appliquer** → `POST /activate`. Brief ambient pulse (~0.8 s) toward the scene's average colour, then neutral.
 3. Tiles catch up via SSE.
 
 ---

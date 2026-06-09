@@ -1,6 +1,6 @@
 # Frontend
 
-_Last updated: 2026-06-05_
+_Last updated: 2026-06-09_
 
 ## Framework & routing
 
@@ -25,8 +25,8 @@ Typography: **Bricolage Grotesque** (display), **DM Sans** (body). Tokens prefix
 | Topic | Decision |
 |---|---|
 | **Dashboard layout** | Two sections — **Lights** then **Sensors** (`kind`). Flat 2-column grid within each section. No room/zone grouping in v1 (no `room` field; `Device.zone` is LUMI hardware only). Good naming convention for admins (`Salon plafond`, …). |
-| **Scene activation (USER)** | Tap → `POST /activate`. Feedback: **luminous border** on the active scene card + **ambient canvas** transitions toward the average colour of the scene's saved `SceneDevice` rows (~0.5–1 s). Tiles then catch up via SSE. No toast in v1. |
-| **Scene capture (ADMIN)** | **Dashboard capture mode** — not a standalone wizard. Flow: `/scenes` → create or pick scene → enter capture mode → dashboard shows a glass banner + selectable tiles → FAB **Capture state** → `POST /scenes/[id]/capture`. Shortcut **Select all** in the banner. Admin adjusts lights first, then selects devices and captures. Rename/delete via `⋯` menu on scene cards. |
+| **Scene activation (USER)** | Tap a scene card → opens **`SceneSheet`** view (device list shows **saved** state per light). **Appliquer** → `POST /activate`, then the sheet **closes**. Feedback: brief **ambient canvas pulse** (~0.8 s toward the scene's average colour via `--lumi-ambient`), then back to neutral — no persistent "active" border on the card. Tiles catch up via SSE. No toast in v1. |
+| **Scene capture (ADMIN)** | Unified in **`SceneSheet` edit mode**. Flow: create scene → sheet opens in edit → list all lights with live state (SSE) + checkboxes → **Valider la sélection** → `POST /scenes/[id]/capture` (full membership sync). Existing scenes: **Modifier la sélection** in view mode. Admin adjusts lights on the dashboard first, then selects in the sheet. Rename and delete stay in view mode. |
 | **Hue vs LUMI sheet** | One `DeviceControlSheet`; Animation tab only when `protocol === 'LUMI'`. |
 
 ---
@@ -61,7 +61,7 @@ The SSE stream carries **only device state** (see [api.md](api.md#stream-sse)). 
 | `/invite/[token]` | Public | Registration form via invite token |
 | `/` | USER | Redirects to `/dashboard` |
 | `/dashboard` | USER | Device tiles in **Lights** / **Sensors** sections. Live via SSE. |
-| `/scenes` | USER | Scene list — activate. Create/edit/capture/delete are ADMIN. |
+| `/scenes` | USER | Scene list — tap opens `SceneSheet` (view). **Appliquer** activates for all users. ADMIN: create scene (opens sheet in edit mode), **Modifier la sélection** / rename / delete in the sheet. |
 | `/triggers` | USER | Trigger list — view + enable/disable. Create/edit/delete are ADMIN. |
 | `/admin/devices` | ADMIN | Manage auto-discovered devices — rename, set zone, remove, trigger discovery |
 | `/admin/users` | ADMIN | Account management — create, set role, deactivate, delete |
@@ -83,8 +83,8 @@ Roles: `ADMIN` > `USER`. Within a shared route, USER-safe actions are always ava
 
 ## Key screens
 
-- **Dashboard (`/dashboard`)** — Two sections: **Lights** (grid of control tiles) and **Sensors** (read-only). Each light tile: name, reachability, power toggle, brightness slider. Tap tile body → `DeviceControlSheet`. SENSOR tiles: active/idle only. Optional **capture mode** (ADMIN): banner + selectable tiles + FAB when snapshotting a scene. Commands return `202`; state confirmed over SSE.
-- **Scenes (`/scenes`)** — Scene cards; tap to activate (luminous active state + ambient canvas shift). ADMIN: create scene, launch **capture mode** on dashboard, rename/delete via card menu. Capture calls `POST /api/scenes/[id]/capture` with selected `deviceIds`.
+- **Dashboard (`/dashboard`)** — Two sections: **Lights** (grid of control tiles) and **Sensors** (read-only). Each light tile: name, reachability, power toggle, brightness slider. Tap tile body → `DeviceControlSheet`. SENSOR tiles: active/idle only. Commands return `202`; state confirmed over SSE.
+- **Scenes (`/scenes`)** — Scene cards (name + device count). Tap → **`SceneSheet` view**: device rows with colour pastilles and state labels from the **saved** scene target (`GET /api/scenes/[id]`). **Appliquer** → `POST /api/scenes/[id]/activate` (brief ambient pulse, sheet closes). ADMIN: create opens sheet in **edit mode** — all lights listed with live state + checkboxes, **Valider la sélection** → `POST /api/scenes/[id]/capture` (syncs full membership); **Modifier la sélection** from view mode; rename/delete in view mode.
 - **Triggers (`/triggers`)** — Glass cards with natural-language summaries (cron → French schedule, sensor → device + presence/absence). Enable/disable toggle (`PATCH`) for all users. ADMIN: create/edit via bottom sheet (`TriggerSheet`), delete with confirmation, FAB to add. See [automation.md](automation.md) for firing semantics.
 - **Admin · Devices (`/admin/devices`)** — Devices are auto-discovered (no create). Rename, set zone (LUMI only), remove stale devices, trigger a discovery sweep.
 - **Admin · Users (`/admin/users`)** — List users, issue invites (`POST /api/invites` → copyable link), revoke pending invites, change role, set `active: false` to cut off a departed flatmate instantly (see [api.md](api.md#users)).

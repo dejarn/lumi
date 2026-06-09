@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma"
 
 type Params = { params: Promise<{ id: string }> }
 
-// POST /api/scenes/[id]/capture — snapshot the CURRENT state of the given lights
-// into the scene (ADMIN). Only LIGHT devices; a SENSOR id → 422.
+// POST /api/scenes/[id]/capture — replace scene membership with the given lights,
+// snapshotting each device's CURRENT DB state (ADMIN). Only LIGHT devices; SENSOR → 422.
 export async function POST(req: NextRequest, { params }: Params) {
   const auth = await requireAdmin()
   if (isResponse(auth)) return auth
@@ -41,9 +41,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   }))
 
   const captured = await prisma.$transaction(async (tx) => {
-    await tx.sceneDevice.deleteMany({ where: { sceneId: id, deviceId: { in: deviceIds } } })
-    await tx.sceneDevice.createMany({ data })
-    return tx.sceneDevice.findMany({ where: { sceneId: id, deviceId: { in: deviceIds } } })
+    await tx.sceneDevice.deleteMany({ where: { sceneId: id } })
+    if (data.length > 0) {
+      await tx.sceneDevice.createMany({ data })
+    }
+    return tx.sceneDevice.findMany({ where: { sceneId: id }, orderBy: { deviceId: "asc" } })
   })
 
   return NextResponse.json(captured)

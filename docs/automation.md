@@ -1,6 +1,6 @@
 # Automation
 
-_Last updated: 2026-06-05_
+_Last updated: 2026-06-09_
 
 Automation is the heart of Lumi: **scenes** (named snapshots of light states) activated either by hand or automatically by **triggers** (a cron schedule or a sensor event). This document covers the full lifecycle — who evaluates triggers, when scenes fire, and the reliability guarantees. Data shapes live in [database.md](database.md); HTTP surfaces in [api.md](api.md); device delivery in [bridge.md](bridge.md).
 
@@ -29,6 +29,8 @@ Whether fired by a user (`POST /api/scenes/[id]/activate`) or by a trigger, acti
 3. The bridge routes each command to the right protocol and confirms delivery.
 
 **Fan-out, all at once. Best-effort.** Commands are sent together; the call returns without waiting for every device. A partial failure (one unreachable light) does **not** roll back the others. The resulting device states stream back to the dashboard over SSE as each `STATE_REPORT` / Hue event lands.
+
+**Shared devices across scenes.** Two scenes may include the same `LIGHT`. Activating them in succession applies **last activation wins** — each fan-out overwrites that device's state with the latest scene's saved values. There is no merge, no warning, and no rollback if the user expected both scenes to "stack". This is consistent with the best-effort model above.
 
 Scenes contain `LIGHT` devices only — sensors have no settable state and are rejected at the API.
 

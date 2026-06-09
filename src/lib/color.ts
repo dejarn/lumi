@@ -1,5 +1,7 @@
 export type ApiHsv = { hue: number; saturation: number; colorBrightness: number }
 
+export type SceneColorInput = ApiHsv & { power?: boolean }
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
@@ -78,36 +80,25 @@ export function apiHsvToHex(c: ApiHsv): string {
   return rgbToHex(r, g, b)
 }
 
-/** Circular mean on hue (degrees) to avoid wrap at 360°. */
-function averageHueDegrees(hues: number[]): number {
-  let sumSin = 0
-  let sumCos = 0
-
-  for (const h of hues) {
-    const rad = (h * Math.PI) / 180
-    sumSin += Math.sin(rad)
-    sumCos += Math.cos(rad)
-  }
-
-  let avg = (Math.atan2(sumSin / hues.length, sumCos / hues.length) * 180) / Math.PI
-  if (avg < 0) {
-    avg += 360
-  }
-
-  return avg
-}
-
-export function averageColor(devices: ApiHsv[]): string {
+/** Scene ambient / card pastille — RGB mean; powered-off devices count as black. */
+export function averageColor(devices: SceneColorInput[]): string {
   if (devices.length === 0) {
     return "transparent"
   }
 
-  const pickers = devices.map(apiToPicker)
-  const avgPicker = {
-    h: averageHueDegrees(pickers.map((p) => p.h)),
-    s: pickers.reduce((sum, p) => sum + p.s, 0) / pickers.length,
-    v: pickers.reduce((sum, p) => sum + p.v, 0) / pickers.length,
+  let sumR = 0
+  let sumG = 0
+  let sumB = 0
+
+  for (const d of devices) {
+    if (d.power === false) continue
+    const picker = apiToPicker(d)
+    const [r, g, b] = hsvToRgb(picker.h, picker.s / 100, picker.v / 100)
+    sumR += r
+    sumG += g
+    sumB += b
   }
 
-  return apiHsvToHex(pickerToApi(avgPicker))
+  const n = devices.length
+  return rgbToHex(Math.round(sumR / n), Math.round(sumG / n), Math.round(sumB / n))
 }

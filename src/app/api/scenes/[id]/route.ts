@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params
   const scene = await prisma.scene.findUnique({
     where: { id },
-    include: { sceneDevices: true },
+    include: { sceneDevices: { include: { device: true } } },
   })
   if (!scene) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
@@ -28,6 +28,19 @@ export async function GET(_req: NextRequest, { params }: Params) {
       saturation: d.saturation,
       colorBrightness: d.colorBrightness,
       animId: d.animId,
+      name: d.device.name,
+      reachable: d.device.reachable,
+      kind: d.device.kind,
+      current: {
+        power: d.device.power,
+        brightness: d.device.brightness,
+        hue: d.device.hue,
+        saturation: d.device.saturation,
+        colorBrightness: d.device.colorBrightness,
+        animId: d.device.animId,
+        animSpeed: d.device.animSpeed,
+        animIntensity: d.device.animIntensity,
+      },
     })),
   })
 }

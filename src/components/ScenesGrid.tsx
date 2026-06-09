@@ -11,6 +11,7 @@ import DialogContent from "@mui/material/DialogContent"
 import DialogActions from "@mui/material/DialogActions"
 import TextField from "@mui/material/TextField"
 import SceneCard from "@/components/SceneCard"
+import SceneSheet from "@/components/SceneSheet"
 import StateCard from "@/components/ui/StateCard"
 
 export type SceneWithColor = {
@@ -26,10 +27,21 @@ type ScenesGridProps = {
 
 export default function ScenesGrid({ scenes, isAdmin }: ScenesGridProps) {
   const router = useRouter()
-  const [activeSceneId, setActiveSceneId] = useState<string | null>(null)
+  const [openSceneId, setOpenSceneId] = useState<string | null>(null)
+  const [startInEditMode, setStartInEditMode] = useState(false)
+  const [pendingSceneName, setPendingSceneName] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState("")
   const [creating, setCreating] = useState(false)
+
+  const openScene = openSceneId ? scenes.find(({ scene }) => scene.id === openSceneId) : undefined
+  const openSceneName = openScene?.scene.name ?? pendingSceneName
+
+  function closeSheet() {
+    setOpenSceneId(null)
+    setStartInEditMode(false)
+    setPendingSceneName("")
+  }
 
   async function handleCreate() {
     const trimmed = name.trim()
@@ -42,15 +54,19 @@ export default function ScenesGrid({ scenes, isAdmin }: ScenesGridProps) {
     })
     setCreating(false)
     if (res.ok) {
+      const scene = (await res.json()) as Scene
       setCreateOpen(false)
       setName("")
+      setPendingSceneName(scene.name)
+      setOpenSceneId(scene.id)
+      setStartInEditMode(true)
       router.refresh()
     }
   }
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      {isAdmin && (
+      {isAdmin && scenes.length > 0 && (
         <Box>
           <Button variant="outlined" onClick={() => setCreateOpen(true)}>
             Nouvelle scène
@@ -74,28 +90,20 @@ export default function ScenesGrid({ scenes, isAdmin }: ScenesGridProps) {
               scene={scene}
               averageColor={averageColor}
               deviceCount={deviceCount}
-              active={activeSceneId === scene.id}
-              isAdmin={isAdmin}
-              onActivate={setActiveSceneId}
+              onOpen={setOpenSceneId}
             />
           ))}
         </Box>
       )}
 
-      {isAdmin && scenes.length > 0 && (
-        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-          {scenes.map(({ scene }) => (
-            <Button
-              key={scene.id}
-              size="small"
-              variant="text"
-              onClick={() => router.push(`/dashboard?capture=${scene.id}`)}
-            >
-              Capturer · {scene.name}
-            </Button>
-          ))}
-        </Box>
-      )}
+      <SceneSheet
+        open={openSceneId !== null}
+        sceneId={openSceneId ?? ""}
+        sceneName={openSceneName}
+        isAdmin={isAdmin}
+        startInEditMode={startInEditMode}
+        onClose={closeSheet}
+      />
 
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>Nouvelle scène</DialogTitle>

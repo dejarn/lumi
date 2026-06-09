@@ -20,6 +20,7 @@ export default async function ScenesPage() {
     deviceCount: scene.sceneDevices.length,
     averageColor: averageColor(
       scene.sceneDevices.map((d) => ({
+        power: d.power,
         hue: d.hue,
         saturation: d.saturation,
         colorBrightness: d.colorBrightness,
