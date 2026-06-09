@@ -13,6 +13,7 @@ import Button from "@mui/material/Button"
 import ToggleButton from "@mui/material/ToggleButton"
 import { useDeviceState } from "@/components/SseProvider"
 import { postCommand } from "@/lib/device-command"
+import { tabForAnimId, colorModeCommands } from "@/lib/device-control"
 import { apiToPicker, pickerToApi } from "@/lib/color"
 import { LUMI_EFFECTS } from "@/lib/animations"
 
@@ -64,16 +65,26 @@ export default function DeviceControlSheet({
     }
   }, [])
 
+  useEffect(() => {
+    if (open) {
+      // Sync tab when sheet opens (or animId changes while open)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional resync on open
+      setTab(tabForAnimId(animId))
+    }
+  }, [open, animId])
+
   const postColor = useCallback(
     (h: number, s: number, cb: number) => {
-      void postCommand(device.id, {
+      for (const cmd of colorModeCommands(animId, {
         type: "color",
         hue: h,
         saturation: s,
         brightness: cb,
-      })
+      })) {
+        void postCommand(device.id, cmd)
+      }
     },
-    [device.id],
+    [device.id, animId],
   )
 
   const onPickerChange = useCallback(
@@ -208,9 +219,14 @@ export default function DeviceControlSheet({
                 max={255}
                 value={brightness}
                 disabled={disabled}
-                onChangeCommitted={(_, value) =>
-                  void postCommand(device.id, { type: "brightness", brightness: value as number })
-                }
+                onChangeCommitted={(_, value) => {
+                  for (const cmd of colorModeCommands(animId, {
+                    type: "brightness",
+                    brightness: value as number,
+                  })) {
+                    void postCommand(device.id, cmd)
+                  }
+                }}
               />
             </Box>
 
