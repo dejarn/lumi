@@ -424,7 +424,11 @@ function TriggerSheetForm({
             </FormControl>
 
             <Box>
-              <Typography variant="caption" color="text.secondary" gutterBottom>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mb: 1 }}
+              >
                 État du capteur
               </Typography>
               <ToggleButtonGroup
