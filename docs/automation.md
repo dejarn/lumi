@@ -36,7 +36,7 @@ Scenes contain `LIGHT` devices only — sensors have no settable state and are r
 
 ## CRON triggers
 
-A `CRON` trigger holds a `cronExpr` (e.g. `0 7 * * 1-5`). The scheduler registers one `node-cron` job per enabled `CRON` trigger at boot.
+A `CRON` trigger holds a `cronExpr` (e.g. `0 7 * * 1-5`). The UI never exposes raw cron syntax: admins pick hour, minute, and day presets in `TriggerSheet`, which generates `cronExpr` via `buildCron` (`src/lib/automation/cron-human.ts`). List cards show the same schedule in French via `cronToHuman`. The scheduler registers one `node-cron` job per enabled `CRON` trigger at boot.
 
 - **Fire**: at the scheduled time → activate the linked scene (fan-out above) → set `Trigger.lastFiredAt`.
 - **Reload**: creating, editing, enabling/disabling, or deleting a `CRON` trigger re-registers the scheduler's jobs so changes take effect without a restart.

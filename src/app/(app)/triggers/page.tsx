@@ -1,11 +1,9 @@
 import Box from "@mui/material/Box"
 import { prisma } from "@/lib/prisma"
 import { getSession } from "@/lib/get-session"
-import TriggerForm from "@/components/TriggerForm"
-import TriggerList from "@/components/TriggerList"
+import TriggersClient from "@/components/TriggersClient"
 import PageHeader from "@/components/ui/PageHeader"
 import PageSection from "@/components/ui/PageSection"
-import StateCard from "@/components/ui/StateCard"
 
 export default async function TriggersPage() {
   const session = await getSession()
@@ -31,18 +29,13 @@ export default async function TriggersPage() {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <PageHeader title="Déclencheurs" />
       <PageSection>
-        {triggers.length === 0 ? (
-          <StateCard icon="◷" title="Aucun déclencheur" />
-        ) : (
-          <TriggerList triggers={triggers} />
-        )}
+        <TriggersClient
+          triggers={triggers}
+          scenes={scenes}
+          sensorDevices={sensorDevices}
+          isAdmin={isAdmin}
+        />
       </PageSection>
-
-      {isAdmin && (
-        <PageSection label="Nouveau déclencheur">
-          <TriggerForm scenes={scenes} sensorDevices={sensorDevices} />
-        </PageSection>
-      )}
     </Box>
   )
 }
