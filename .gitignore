@@ -42,3 +42,6 @@ prisma/*.db-journal
 # Claude Code (local only)
 .claude/settings.local.json
 .claude/worktrees/
+
+# MQTT broker credentials (generated on the Pi, see .env.example)
+mosquitto/passwd
