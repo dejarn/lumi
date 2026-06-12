@@ -19,23 +19,6 @@ services:
     mem_limit: 512m
     cpus: "1.0"
 
-  migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    working_dir: /app
-    entrypoint: ["sh", "-c"]
-    command:
-      - "node node_modules/prisma/build/index.js migrate deploy"
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - internal
-    restart: "no"
-
   mosquitto:
     image: eclipse-mosquitto:openssl
     restart: unless-stopped
@@ -106,8 +89,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
       mqtt-bridge:
         condition: service_healthy
     networks:

@@ -1,0 +1,41 @@
+name: Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & deploy on Pi
+    runs-on: [self-hosted, linux, arm64]
+    environment: production
+    env:
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      AUTH_URL: ${{ secrets.AUTH_URL }}
+      ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      HUE_BRIDGE_IP: ${{ secrets.HUE_BRIDGE_IP }}
+      BRIDGE_TOKEN: ${{ secrets.BRIDGE_TOKEN }}
+      APP_HOST: ${{ secrets.APP_HOST }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start database
+        run: docker compose up -d db --wait
+
+      # Migrations run in the app entrypoint (docker/entrypoint.sh)
+      - name: Deploy stack
+        run: docker compose up -d app --remove-orphans --wait
+
+      - name: Prune old images
+        if: always()
+        run: docker image prune -f
