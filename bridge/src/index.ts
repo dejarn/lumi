@@ -98,6 +98,13 @@ async function main() {
 
   log("creating Hue client")
   const hue = createHueClient(config.hueBridgeIp, config.hueAppKey)
+  try {
+    const count = await hue.syncDevices()
+    log(`synced ${count} Hue light(s)`)
+  } catch (err) {
+    // Hue Bridge down ≠ bridge down — poll will retry.
+    console.error("[boot] Hue sync failed:", err)
+  }
   hue.startPoll(config.huePollMs)
 
   log("starting HTTP server")

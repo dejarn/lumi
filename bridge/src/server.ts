@@ -1,7 +1,7 @@
 import { DeviceKind, Protocol } from "@prisma/client"
 import Fastify, { type FastifyInstance } from "fastify"
 import { parseCommand, type CommandBody } from "./command.js"
-import type { HueClient } from "./hue.js"
+import { commandToHue, HueApiError, type HueClient } from "./hue.js"
 import { type LumiBridge, LumiTimeoutError } from "./lumi.js"
 import { dbPing, getDevice } from "./state.js"
 
@@ -61,8 +61,21 @@ export function buildServer(deps: {
         return reply.code(200).send({ ok: true })
       }
 
-      case Protocol.HUE:
-        return reply.code(501).send({ error: "Hue not implemented" })
+      case Protocol.HUE: {
+        const hueCmd = commandToHue(body)
+        if (!hueCmd) {
+          return reply.code(422).send({ error: "Animations are LUMI only" })
+        }
+        try {
+          await deps.hue.setLight(device.externalId, hueCmd)
+        } catch (err) {
+          if (err instanceof HueApiError) {
+            return reply.code(502).send({ error: err.message })
+          }
+          throw err
+        }
+        return reply.code(200).send({ ok: true })
+      }
 
       case Protocol.ZIGBEE:
         return reply.code(422).send({ error: "Sensors are read-only" })
@@ -107,6 +120,10 @@ export function buildServer(deps: {
 
   app.post("/discover", async (_req, reply) => {
     await deps.lumi.discover()
+    // Hue sweep is fire-and-forget — discovery stays 202/best-effort.
+    deps.hue.syncDevices().catch((err: unknown) => {
+      app.log.error({ err }, "hue discovery sync failed")
+    })
     return reply.code(202).send({ ok: true })
   })
 

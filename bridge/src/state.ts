@@ -148,6 +148,65 @@ export async function upsertAndNotify(dev: {
   await notify(row.id)
 }
 
+export interface HueLightUpsert {
+  externalId: string
+  name: string
+  reachable: boolean
+  power?: boolean
+  brightness?: number
+  hue?: number
+  saturation?: number
+}
+
+/** Hue poll/sync → upsert HUE row; NOTIFY only when visible state changed. */
+export async function upsertHueLight(input: HueLightUpsert): Promise<void> {
+  const where = {
+    protocol_externalId: { protocol: Protocol.HUE, externalId: input.externalId },
+  }
+  const existing = await db.device.findUnique({
+    where,
+    select: { id: true, power: true, brightness: true, hue: true, saturation: true, reachable: true },
+  })
+
+  const state = {
+    ...(input.power !== undefined && { power: input.power }),
+    ...(input.brightness !== undefined && { brightness: input.brightness }),
+    ...(input.hue !== undefined && { hue: input.hue }),
+    ...(input.saturation !== undefined && { saturation: input.saturation }),
+    reachable: input.reachable,
+  }
+
+  if (!existing) {
+    const created = await db.device.create({
+      data: {
+        // Admin renames later via the app — Hue name only seeds the row.
+        name: input.name,
+        protocol: Protocol.HUE,
+        externalId: input.externalId,
+        kind: DeviceKind.LIGHT,
+        lastSeen: new Date(),
+        ...state,
+      },
+      select: { id: true },
+    })
+    await notify(created.id)
+    return
+  }
+
+  const changed =
+    (input.power !== undefined && existing.power !== input.power) ||
+    (input.brightness !== undefined && existing.brightness !== input.brightness) ||
+    (input.hue !== undefined && existing.hue !== input.hue) ||
+    (input.saturation !== undefined && existing.saturation !== input.saturation) ||
+    existing.reachable !== input.reachable
+
+  await db.device.update({
+    where: { id: existing.id },
+    data: { ...state, lastSeen: new Date() },
+  })
+  if (changed) await notify(existing.id)
+}
+
 /** @deprecated Use upsertAndNotify */
 export async function upsertDevice(dev: {
   externalId: string

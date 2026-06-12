@@ -56,6 +56,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       MQTT_URL: mqtt://mosquitto:1883
       HUE_BRIDGE_IP: ${HUE_BRIDGE_IP}
+      HUE_APP_KEY: ${HUE_APP_KEY:-}
       BRIDGE_TOKEN: ${BRIDGE_TOKEN}
       BRIDGE_PORT: "4000"
     depends_on:
@@ -65,6 +66,9 @@ services:
         condition: service_started
     networks:
       - internal
+      # Egress-only path to the LAN for the Hue Bridge REST API — no ports are
+      # published, so the bridge stays unreachable from outside (rule 5).
+      - lan
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
       interval: 15s
@@ -113,6 +117,7 @@ services:
 networks:
   internal:
     internal: true
+  lan: {}
   traefik:
     external: true
     name: traefik
