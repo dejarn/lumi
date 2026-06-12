@@ -29,6 +29,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # mosquitto/passwd is gitignored, so checkout's git clean wipes it on
+      # every deploy. Regenerate it from secrets before the stack starts —
+      # otherwise Docker creates a directory at the bind-mount path and
+      # mosquitto rejects all connections (bridge then fails its healthcheck).
+      - name: Generate mosquitto passwd
+        run: |
+          rm -rf mosquitto/passwd
+          printf '%s:%s\n' "$MQTT_USER" "$MQTT_PASSWORD" > mosquitto/passwd
+          docker run --rm -v "$PWD/mosquitto:/work" eclipse-mosquitto:openssl \
+            mosquitto_passwd -U /work/passwd
+          chmod 644 mosquitto/passwd
+
       - name: Build images
         run: docker compose build
 
