@@ -118,8 +118,8 @@ importers:
         specifier: ^5.2.0
         version: 5.8.5
       lumi-protocol:
-        specifier: github:dejarn/lumi-protocol#4a62ec3d0bf9c2637342ccc05064ebad752bcb82&path:bridge/node
-        version: https://codeload.github.com/dejarn/lumi-protocol/tar.gz/4a62ec3d0bf9c2637342ccc05064ebad752bcb82#path:bridge/node
+        specifier: github:dejarn/lumi-protocol#a615615a8cfbeed4eb4239ac9fa27ec1408f68b2&path:bridge/node
+        version: https://codeload.github.com/dejarn/lumi-protocol/tar.gz/a615615a8cfbeed4eb4239ac9fa27ec1408f68b2#path:bridge/node
       mqtt:
         specifier: ^5.10.0
         version: 5.15.1
@@ -2704,8 +2704,8 @@ packages:
     resolution: {integrity: sha512-DqC6n3QQ77zdFpCMASA1a3Jlb64Hv2N2DciFGkO/4L9+q/IpIAuRlKOvCXabtRW6cQf8usbmM6BE/TOPysCdIA==}
     engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
 
-  lumi-protocol@https://codeload.github.com/dejarn/lumi-protocol/tar.gz/4a62ec3d0bf9c2637342ccc05064ebad752bcb82#path:bridge/node:
-    resolution: {path: bridge/node, tarball: https://codeload.github.com/dejarn/lumi-protocol/tar.gz/4a62ec3d0bf9c2637342ccc05064ebad752bcb82}
+  lumi-protocol@https://codeload.github.com/dejarn/lumi-protocol/tar.gz/a615615a8cfbeed4eb4239ac9fa27ec1408f68b2#path:bridge/node:
+    resolution: {path: bridge/node, tarball: https://codeload.github.com/dejarn/lumi-protocol/tar.gz/a615615a8cfbeed4eb4239ac9fa27ec1408f68b2}
     version: 1.0.0
 
   magic-string@0.30.21:
@@ -6225,7 +6225,7 @@ snapshots:
 
   lru.min@1.1.4: {}
 
-  lumi-protocol@https://codeload.github.com/dejarn/lumi-protocol/tar.gz/4a62ec3d0bf9c2637342ccc05064ebad752bcb82#path:bridge/node: {}
+  lumi-protocol@https://codeload.github.com/dejarn/lumi-protocol/tar.gz/a615615a8cfbeed4eb4239ac9fa27ec1408f68b2#path:bridge/node: {}
 
   magic-string@0.30.21:
     dependencies:
