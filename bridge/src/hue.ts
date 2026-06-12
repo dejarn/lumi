@@ -99,6 +99,8 @@ export function createHueClient(bridgeIp: string, appKey: string): HueClient {
   async function request(method: string, path: string, body?: unknown): Promise<unknown> {
     const res = await fetch(`https://${bridgeIp}${path}`, {
       method,
+      // Unroutable LAN IP hangs TCP connect — cap it so boot/poll never stall.
+      signal: AbortSignal.timeout(10_000),
       headers: {
         "hue-application-key": appKey,
         ...(body !== undefined && { "content-type": "application/json" }),

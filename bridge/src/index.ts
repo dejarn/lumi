@@ -98,14 +98,6 @@ async function main() {
 
   log("creating Hue client")
   const hue = createHueClient(config.hueBridgeIp, config.hueAppKey)
-  try {
-    const count = await hue.syncDevices()
-    log(`synced ${count} Hue light(s)`)
-  } catch (err) {
-    // Hue Bridge down ≠ bridge down — poll will retry.
-    console.error("[boot] Hue sync failed:", err)
-  }
-  hue.startPoll(config.huePollMs)
 
   log("starting HTTP server")
   const app = buildServer({
@@ -127,6 +119,14 @@ async function main() {
 
   await app.listen({ port: config.bridgePort, host: "0.0.0.0" })
   log(`listening on http://0.0.0.0:${config.bridgePort}`)
+
+  // After listen — a slow/unreachable Hue Bridge must never block the
+  // healthcheck (Hue Bridge down ≠ bridge down; the poll retries).
+  hue
+    .syncDevices()
+    .then((count) => log(`synced ${count} Hue light(s)`))
+    .catch((err) => console.error("[boot] Hue sync failed:", err))
+  hue.startPoll(config.huePollMs)
 }
 
 main().catch((err) => {
