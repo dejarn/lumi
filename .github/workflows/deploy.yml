@@ -19,6 +19,9 @@ jobs:
       ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       HUE_BRIDGE_IP: ${{ secrets.HUE_BRIDGE_IP }}
+      HUE_APP_KEY: ${{ secrets.HUE_APP_KEY }}
+      MQTT_USER: ${{ secrets.MQTT_USER }}
+      MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
       BRIDGE_TOKEN: ${{ secrets.BRIDGE_TOKEN }}
       APP_HOST: ${{ secrets.APP_HOST }}
 
