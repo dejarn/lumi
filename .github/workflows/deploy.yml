@@ -20,8 +20,9 @@ jobs:
       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
       HUE_BRIDGE_IP: ${{ secrets.HUE_BRIDGE_IP }}
       HUE_APP_KEY: ${{ secrets.HUE_APP_KEY }}
-      MQTT_USER: ${{ secrets.MQTT_USER }}
-      MQTT_PASSWORD: ${{ secrets.MQTT_PASSWORD }}
+      MQTT_BRIDGE_PASSWORD: ${{ secrets.MQTT_BRIDGE_PASSWORD }}
+      MQTT_Z2M_PASSWORD: ${{ secrets.MQTT_Z2M_PASSWORD }}
+      MQTT_NODES_PASSWORD: ${{ secrets.MQTT_NODES_PASSWORD }}
       BRIDGE_TOKEN: ${{ secrets.BRIDGE_TOKEN }}
       APP_HOST: ${{ secrets.APP_HOST }}
 
@@ -36,7 +37,9 @@ jobs:
       - name: Generate mosquitto passwd
         run: |
           rm -rf mosquitto/passwd
-          printf '%s:%s\n' "$MQTT_USER" "$MQTT_PASSWORD" > mosquitto/passwd
+          printf 'bridge:%s\nz2m:%s\nnodes:%s\n' \
+            "$MQTT_BRIDGE_PASSWORD" "$MQTT_Z2M_PASSWORD" "$MQTT_NODES_PASSWORD" \
+            > mosquitto/passwd
           docker run --rm -v "$PWD/mosquitto:/work" eclipse-mosquitto:2.0-openssl \
             mosquitto_passwd -U /work/passwd
           chmod 640 mosquitto/passwd

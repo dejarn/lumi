@@ -25,6 +25,7 @@ services:
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
       - mosquitto_data:/mosquitto/data
     networks:
       - internal
@@ -40,8 +41,8 @@ services:
     restart: unless-stopped
     environment:
       ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
-      ZIGBEE2MQTT_CONFIG_MQTT_USER: ${MQTT_USER}
-      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_PASSWORD}
+      ZIGBEE2MQTT_CONFIG_MQTT_USER: z2m
+      ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD: ${MQTT_Z2M_PASSWORD}
       ZIGBEE2MQTT_CONFIG_MQTT_BASE_TOPIC: zigbee2mqtt
       ZIGBEE2MQTT_CONFIG_SERIAL_PORT: /dev/ttyACM0
       ZIGBEE2MQTT_CONFIG_FRONTEND_ENABLED: "false"
@@ -62,7 +63,7 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      MQTT_URL: mqtt://${MQTT_USER}:${MQTT_PASSWORD}@mosquitto:1883
+      MQTT_URL: mqtt://bridge:${MQTT_BRIDGE_PASSWORD}@mosquitto:1883
       HUE_BRIDGE_IP: ${HUE_BRIDGE_IP}
       HUE_APP_KEY: ${HUE_APP_KEY:-}
       BRIDGE_TOKEN: ${BRIDGE_TOKEN}

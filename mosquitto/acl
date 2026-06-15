@@ -1,0 +1,18 @@
+# Per-role ACL for the Mosquitto broker.
+# Three accounts: bridge (mqtt-bridge service), z2m (Zigbee2MQTT), nodes (ESP32 fleet).
+#
+# nodes shares one account across all ESP32s — per-device accounts would require
+# firmware reconfiguration for each new device; deferred to a future firmware release.
+
+user bridge
+# bridge reads all lumi frames (LWT, state_report, discovery) and all z2m topics
+topic readwrite lumi/#
+topic read zigbee2mqtt/#
+
+user z2m
+# Zigbee2MQTT publishes and subscribes only under its own base topic
+topic readwrite zigbee2mqtt/#
+
+user nodes
+# ESP32 nodes publish availability/state/discovery and subscribe to commands
+topic readwrite lumi/#
