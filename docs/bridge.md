@@ -1,6 +1,6 @@
 # mqtt-bridge
 
-_Last updated: 2026-06-05_
+_Last updated: 2026-06-15_
 
 `mqtt-bridge` is the service that connects Lumi to the physical devices. Next.js never talks to a device directly — it calls this service over an internal HTTP API, and this service owns every protocol connection. It is a thin orchestrator on top of the `lumi-protocol` **`bridge/node`** library (see [lumi-protocol/docs/api.md](https://github.com/dejarn/lumi-protocol/blob/main/docs/api.md)); the library does the framing/CRC/ACK, this service does the wiring, the HTTP surface, and the database I/O.
 
@@ -12,9 +12,11 @@ Next.js Route Handlers are request-scoped — they cannot hold a persistent MQTT
 
 | Connection | Purpose |
 |---|---|
-| Mosquitto (MQTT) | LUMI device frames (via `LumiClient`) **and** Zigbee2MQTT topics |
+| Mosquitto (MQTT) | LUMI device frames (via `LumiClient`); Zigbee2MQTT topics subscribed but **not yet processed** (see note below) |
 | Hue Bridge (REST v2) | Philips Hue bulb control + reachability polling |
 | PostgreSQL (Prisma) | Read device rows at startup; write state/reachability on every event |
+
+> **Zigbee status:** `setupZigbee()` in `bridge/src/zigbee.ts` is a **stub** — it subscribes to `zigbee2mqtt/#` but does not parse or persist any messages. Zigbee sensor state and reachability are therefore **not written to PostgreSQL**, and `SENSOR`-type triggers cannot fire in production until this is implemented. Planned for v1.x. See also `bridge/src/state.ts:21-30` for the `resolveDeviceUuid` protocol note.
 
 ## Library wiring
 
@@ -46,7 +48,7 @@ Per-device commands only. **Scene fan-out and trigger logic live in Next.js** �
 | `POST` | `/command/:deviceId` | Send a light command. Body matches the [api.md command shape](api.md#devices). |
 | `POST` | `/zone/:deviceId` | LUMI only — send `SET_ZONE`. Body `{ "zone": 2 }`. |
 | `POST` | `/discover` | Broadcast `DISCOVERY_REQUEST` to all LUMI devices. |
-| `GET` | `/health` | Liveness — broker + Hue + DB reachable. |
+| `GET` | `/health` | Liveness — broker + DB reachable. Returns `{ broker: bool, db: bool }`; `200` if both, `503` otherwise. Hue reachability is excluded (a slow Hue Bridge does not make the bridge unhealthy). |
 
 - **Trust boundary**: the API is reachable only from the `app` container on the `internal` network. A shared secret (`BRIDGE_TOKEN` header) guards it in case the network is ever widened.
 - **Command flow**: the handler routes by the device's protocol —
@@ -65,7 +67,7 @@ Every inbound device event is written to PostgreSQL, the single source of truth:
 |---|---|---|
 | `STATE_REPORT` | LUMI device (via `LumiClient`) | `Device` light columns |
 | `availability` | LUMI LWT topic | `Device.reachable` |
-| Zigbee2MQTT message | z2m topic | `Device.sensorActive` / `reachable` |
+| Zigbee2MQTT message | z2m topic | **not implemented yet** (stub) |
 | Hue event / poll | Hue Bridge | `Device` light columns / `reachable` |
 | `DISCOVERY_ANNOUNCE` | LUMI device | upsert `Device` (incl. `zone`, `protoVersion`) |
 
@@ -99,7 +101,7 @@ Next.js SSE handler: LISTEN device_state
 
 ## Startup & resilience
 
-- **Boot**: connect MQTT + Hue, hydrate `DeviceRegistry` from PostgreSQL, subscribe to `lumi/device/+/state`, `lumi/device/+/availability`, `lumi/discovery/announce`, and the Zigbee2MQTT topics.
+- **Boot**: connect MQTT (degraded boot if broker is down at startup — mqtt.js retries; `/health` reports `broker:false`), then Hue; hydrate `DeviceRegistry` from PostgreSQL; subscribe to `lumi/device/+/state`, `lumi/device/+/availability`, `lumi/discovery/announce`, and `zigbee2mqtt/#` (stub — no processing yet).
 - **MQTT drop**: mqtt.js auto-reconnects; retained `availability` + `state` topics mean the registry re-syncs to the last known device states on resubscribe.
 - **Best-effort**: like triggers, command delivery is best-effort. A failed command rejects its own request; it does not retry indefinitely or block others. Partial scene failures are tolerated (one unreachable light does not abort the rest).
 

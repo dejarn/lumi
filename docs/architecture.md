@@ -1,6 +1,6 @@
 # Architecture
 
-_Last updated: 2026-05-20_
+_Last updated: 2026-06-15_
 
 Lumi uses a Next.js application for the UI and API layer, paired with a dedicated `mqtt-bridge` service that maintains persistent connections to the MQTT broker and the Hue local API. The two services communicate over an internal Docker network. PostgreSQL is the single source of truth for device state and application data.
 
@@ -61,7 +61,7 @@ Three protocols are abstracted behind `mqtt-bridge`. Next.js never communicates 
 | Protocol | Devices | How mqtt-bridge handles it |
 |---|---|---|
 | Hue local API v2 | Philips Hue bulbs | HTTP REST calls to Hue Bridge on the local network |
-| Zigbee (open, via MQTT) | Presence sensors | Subscribe to `zigbee2mqtt/+` topics on Mosquitto |
+| Zigbee (open, via MQTT) | Presence sensors | `zigbee2mqtt/#` subscribed — **stub, not yet processed** (v1.x) |
 | lumi-protocol (MQTT) | ESP32 LED strips | Binary frames over `lumi/device/+` MQTT topics |
 
 **Command flow (Next.js → device):** Route Handler → HTTP POST to `mqtt-bridge` internal API → mqtt-bridge routes to correct protocol → device.
@@ -108,7 +108,7 @@ The dashboard connects to a SSE Route Handler (`GET /api/stream`). When mqtt-bri
 |---|---|
 | Host | Raspberry Pi 4 (4 GB RAM, self-hosted) |
 | Containerization | Docker Compose |
-| Reverse proxy | Traefik (TLS via Let's Encrypt, rate limiting on `/api/auth`) |
+| Reverse proxy | Traefik (TLS via Let's Encrypt, rate limiting on the whole `lumi` router — not only `/api/auth`) |
 | CI | GitHub Actions — lint, typecheck, Vitest on every PR |
 | CD | GitHub Actions self-hosted runner on Pi — triggered on release |
 
@@ -118,9 +118,9 @@ The dashboard connects to a SSE Route Handler (`GET /api/stream`). When mqtt-bri
 |---|---|---|
 | `app` | Custom Next.js multi-stage build | `internal` + `traefik` |
 | `mqtt-bridge` | Custom Node.js build | `internal` only |
-| `db` | `postgres:18-alpine` | `internal` only |
-| `mosquitto` | `eclipse-mosquitto:alpine` | `internal` only |
-| `zigbee2mqtt` | `koenkk/zigbee2mqtt` | `internal` only |
+| `db` | `postgres:18.3-alpine` | `internal` only |
+| `mosquitto` | `eclipse-mosquitto:2.0-openssl` | `internal` + `lan` (port 1883 for ESP32 nodes) |
+| `zigbee2mqtt` | `koenkk/zigbee2mqtt:1.42.0` | `internal` only |
 
 `mqtt-bridge`, `db`, `mosquitto`, and `zigbee2mqtt` are never exposed through Traefik. Only `app` is reachable from the internet.
 
