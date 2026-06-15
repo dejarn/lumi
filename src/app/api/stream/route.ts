@@ -40,6 +40,15 @@ export async function GET(req: NextRequest) {
       }
 
       try {
+        // M5: check abort before connecting, register handler before connect()
+        if (req.signal.aborted) {
+          await cleanup()
+          return
+        }
+        req.signal.addEventListener("abort", () => {
+          void cleanup()
+        })
+
         await client.connect()
         await client.query("LISTEN device_state")
 
@@ -66,11 +75,29 @@ export async function GET(req: NextRequest) {
           void cleanup()
         })
 
-        keepAlive = setInterval(() => controller.enqueue(encoder.encode(": ping\n\n")), 25_000)
-
-        req.signal.addEventListener("abort", () => {
-          void cleanup()
-        })
+        // H2: piggyback User.active recheck on keep-alive (CLAUDE.md rule 3).
+        // A revoked user's stream closes within 25 s; the EventSource reconnect
+        // will then receive 401 from requireUser(). Also covers L7: enqueue on
+        // an errored controller throws — the catch calls cleanup() instead of
+        // leaving an uncaught exception.
+        keepAlive = setInterval(() => {
+          void (async () => {
+            try {
+              const u = await prisma.user.findUnique({
+                where: { id: user.id },
+                select: { active: true },
+              })
+              if (!u || !u.active) {
+                // Revocation: cut the stream immediately.
+                await cleanup()
+                return
+              }
+              controller.enqueue(encoder.encode(": ping\n\n"))
+            } catch {
+              void cleanup()
+            }
+          })()
+        }, 25_000)
       } catch (err) {
         await client.end().catch(() => {})
         controller.error(err)
