@@ -1,5 +1,6 @@
 import { DeviceKind, Protocol } from "@prisma/client"
 import Fastify, { type FastifyInstance } from "fastify"
+import { makeAuthHook } from "./auth-hook.js"
 import { parseCommand, type CommandBody } from "./command.js"
 import { commandToHue, HueApiError, type HueClient } from "./hue.js"
 import { type LumiBridge, LumiTimeoutError } from "./lumi.js"
@@ -11,17 +12,11 @@ export function buildServer(deps: {
   lumi: LumiBridge
   hue: HueClient
   mqttConnected: () => boolean
+  token: string
 }): FastifyInstance {
   const app = Fastify({ logger: true })
-  const token = process.env.BRIDGE_TOKEN ?? ""
 
-  // Trust boundary: every route except /health requires the shared secret.
-  app.addHook("onRequest", async (req, reply) => {
-    if (new URL(req.url, "http://localhost").pathname === "/health") return
-    if (req.headers["x-bridge-token"] !== token) {
-      reply.code(401).send({ error: "Unauthorized" })
-    }
-  })
+  app.addHook("onRequest", makeAuthHook(deps.token))
 
   app.get("/health", async (_req, reply) => {
     const dbOk = await dbPing()
