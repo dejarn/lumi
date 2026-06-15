@@ -37,7 +37,7 @@ jobs:
         run: |
           rm -rf mosquitto/passwd
           printf '%s:%s\n' "$MQTT_USER" "$MQTT_PASSWORD" > mosquitto/passwd
-          docker run --rm -v "$PWD/mosquitto:/work" eclipse-mosquitto:openssl \
+          docker run --rm -v "$PWD/mosquitto:/work" eclipse-mosquitto:2.0-openssl \
             mosquitto_passwd -U /work/passwd
           chmod 640 mosquitto/passwd
 

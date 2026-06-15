@@ -31,17 +31,19 @@ function requireEnv(name: string): string {
 
 function validateEnv(): {
   mqttUrl: string
+  bridgeToken: string
   hueBridgeIp: string
   hueAppKey: string
   bridgePort: number
   huePollMs: number
 } {
   const mqttUrl = requireEnv("MQTT_URL")
-  requireEnv("BRIDGE_TOKEN")
+  const bridgeToken = requireEnv("BRIDGE_TOKEN")
   requireEnv("DATABASE_URL")
 
   return {
     mqttUrl,
+    bridgeToken,
     hueBridgeIp: process.env.HUE_BRIDGE_IP ?? "",
     hueAppKey: process.env.HUE_APP_KEY ?? "",
     bridgePort: Number(process.env.BRIDGE_PORT ?? 4000),
@@ -106,11 +108,12 @@ async function main() {
 
   try {
     await waitForMqttConnect(mqttClient, MQTT_CONNECT_TIMEOUT_MS)
+    log("MQTT connected")
   } catch (err) {
-    console.error("[boot] MQTT connect failed:", err)
-    process.exit(1)
+    // Broker down ≠ bridge down: boot degraded, mqtt.js retries in background.
+    // /health reports broker:false (503) until reconnected. Symmetric with b7dac83 for Hue.
+    console.error("[boot] MQTT not connected at boot, continuing degraded:", err)
   }
-  log("MQTT connected")
 
   log("creating LUMI bridge")
   const lumi = createLumiBridge(mqttClient)
@@ -136,6 +139,7 @@ async function main() {
     lumi,
     hue,
     mqttConnected: () => mqttClient.connected,
+    token: config.bridgeToken,
   })
 
   const shutdown = async (signal: string) => {

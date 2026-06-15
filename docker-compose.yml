@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:18.3-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -20,7 +20,7 @@ services:
     cpus: "1.0"
 
   mosquitto:
-    image: eclipse-mosquitto:openssl
+    image: eclipse-mosquitto:2.0-openssl
     restart: unless-stopped
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
@@ -36,7 +36,7 @@ services:
     mem_limit: 128m
 
   zigbee2mqtt:
-    image: koenkk/zigbee2mqtt
+    image: koenkk/zigbee2mqtt:1.42.0
     restart: unless-stopped
     environment:
       ZIGBEE2MQTT_CONFIG_MQTT_SERVER: mqtt://mosquitto:1883
@@ -102,7 +102,7 @@ services:
       db:
         condition: service_healthy
       mqtt-bridge:
-        condition: service_healthy
+        condition: service_started  # broker down ≠ app down; bridge /health still exposes broker:false
     networks:
       - internal
       - traefik
