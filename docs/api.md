@@ -186,7 +186,7 @@ Devices are **auto-discovered** — `mqtt-bridge` upserts them into the DB from 
 - `CRON` requires `cronExpr`; `SENSOR` requires `sensorDeviceId` (a `SENSOR` device) + `sensorState`. Mismatched fields → `422`.
 - `enabled` defaults to `true`.
 
-**PATCH /api/triggers/[id]** body (partial):
+**PATCH /api/triggers/[id]** body (partial) — **ADMIN** for all fields; **exception: a body strictly equal to `{"enabled": boolean}` is allowed for USER** (on/off toggle from the dashboard):
 ```json
 { "enabled": false }
 ```

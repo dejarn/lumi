@@ -68,7 +68,7 @@ This is a known, accepted v1 limitation. The planned remedy is a **fixed global 
 
 ## Enable / disable
 
-Every trigger has `enabled` (default `true`). Disabling (`PATCH /api/triggers/[id]` → `{ "enabled": false }`) stops it firing without deleting it:
+Every trigger has `enabled` (default `true`). Disabling (`PATCH /api/triggers/[id]` → `{ "enabled": false }`) stops it firing without deleting it. **USER role may send a body of exactly `{"enabled": boolean}` to toggle on/off** (useful from the dashboard); any other field requires ADMIN:
 - `CRON` → its `node-cron` job is removed on reload.
 - `SENSOR` → it is skipped during evaluation.
 

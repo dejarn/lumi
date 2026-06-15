@@ -2,7 +2,6 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import "next-auth/jwt"
 import { authorizeCredentials } from "@/lib/credentials"
-import { prisma } from "@/lib/prisma"
 import type { Role } from "@prisma/client"
 
 // Startup validation for critical env vars (skip during next build — no secrets in build stage).
@@ -61,15 +60,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id as string
         token.username = user.username
         token.role = user.role
-      } else if (token.id) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: { username: true, role: true, active: true },
-        })
-        if (!dbUser || !dbUser.active) return token
-        token.username = dbUser.username
-        token.role = dbUser.role
       }
+      // No DB refresh on subsequent token reads: username/role may be stale in the
+      // JWT but revocation and effective role are re-checked on every request by
+      // resolveUser()/requireAdmin() in lib/auth-guard.ts (CLAUDE.md rule 3).
       return token
     },
     async session({ session, token }) {
