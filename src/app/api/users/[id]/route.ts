@@ -23,6 +23,22 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 })
   }
 
+  // L5: prevent locking out the last active ADMIN
+  const isDemotingOrDeactivating =
+    (data.role !== undefined && data.role !== "ADMIN") || data.active === false
+  if (isDemotingOrDeactivating) {
+    const target = await prisma.user.findUnique({ where: { id }, select: { role: true, active: true } })
+    if (target?.role === "ADMIN" && target.active) {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN", active: true } })
+      if (adminCount === 1) {
+        return NextResponse.json(
+          { error: "Cannot deactivate or demote the last active ADMIN" },
+          { status: 422 },
+        )
+      }
+    }
+  }
+
   try {
     const user = await prisma.user.update({
       where: { id },

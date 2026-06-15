@@ -37,7 +37,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     sensorState?: boolean
   } = {}
   if (typeof body.enabled === "boolean") data.enabled = body.enabled
-  if (typeof body.name === "string") data.name = body.name.trim()
+  if (typeof body.name === "string") {
+    const n = body.name.trim()
+    if (!n) return NextResponse.json({ error: "name must be non-empty" }, { status: 422 })
+    data.name = n
+  }
 
   if (existing.type === "CRON") {
     if (body.sensorDeviceId != null || body.sensorState != null)
@@ -55,6 +59,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (body.cronExpr != null)
       return NextResponse.json({ error: "Cannot set cronExpr on SENSOR trigger" }, { status: 422 })
     if (body.sensorDeviceId !== undefined) {
+      if (typeof body.sensorDeviceId !== "string")
+        return NextResponse.json({ error: "sensorDeviceId must be a string" }, { status: 422 })
       const sensor = await prisma.device.findUnique({ where: { id: body.sensorDeviceId }, select: { kind: true } })
       if (!sensor) return NextResponse.json({ error: "sensorDevice not found" }, { status: 422 })
       if (sensor.kind !== "SENSOR") return NextResponse.json({ error: "Device is not a SENSOR" }, { status: 422 })

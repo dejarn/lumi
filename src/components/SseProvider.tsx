@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { useRouter } from "next/navigation"
 import type { DeviceStatePatch } from "@/lib/types"
 
 type DeviceStateMap = Record<string, DeviceStatePatch>
@@ -47,7 +48,10 @@ export function useSseReconnect(): () => void {
   return useContext(SseContext).reconnect
 }
 
+const MAX_RETRIES_BEFORE_AUTH_CHECK = 5
+
 export default function SseProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
   const [states, setStates] = useState<DeviceStateMap>({})
   const [connected, setConnected] = useState(false)
   const [error, setError] = useState(false)
@@ -87,12 +91,21 @@ export default function SseProvider({ children }: { children: React.ReactNode })
         setError(true)
         source.close()
         sourceRef.current = null
-        const delay = Math.min(1000 * 2 ** retryRef.current, 30_000)
         retryRef.current += 1
+        // After N consecutive failures, check if the session is still valid.
+        // A 401 from /api/devices means the user was revoked — redirect to login.
+        if (retryRef.current >= MAX_RETRIES_BEFORE_AUTH_CHECK) {
+          void fetch("/api/devices").then((res) => {
+            if (res.status === 401) {
+              router.push("/login")
+            }
+          })
+        }
+        const delay = Math.min(1000 * 2 ** (retryRef.current - 1), 30_000)
         retryTimerRef.current = setTimeout(() => connectRef.current(), delay)
       }
     })
-  }, [])
+  }, [router])
 
   useEffect(() => {
     connectRef.current = connect

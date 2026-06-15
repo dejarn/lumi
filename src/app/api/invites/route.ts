@@ -22,7 +22,10 @@ export async function POST(req: NextRequest) {
   if (isResponse(auth)) return auth
 
   const body = await req.json().catch(() => ({}))
-  const role = body.role === "ADMIN" ? "ADMIN" : "USER"
+  if (body.role !== undefined && body.role !== "ADMIN" && body.role !== "USER") {
+    return NextResponse.json({ error: 'role must be "ADMIN" or "USER"' }, { status: 400 })
+  }
+  const role: "ADMIN" | "USER" = body.role === "ADMIN" ? "ADMIN" : "USER"
 
   const rawToken = crypto.randomBytes(32).toString("hex")
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex")

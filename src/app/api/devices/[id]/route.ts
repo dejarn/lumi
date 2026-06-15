@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 import { requireUser, requireAdmin, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
-import { reloadCronJobs } from "@/lib/automation/scheduler"
 import { toDeviceDto } from "@/lib/device-dto"
 
 type Params = { params: Promise<{ id: string }> }
@@ -58,6 +57,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     }
     throw e
   }
-  await reloadCronJobs()
+  // No reloadCronJobs() needed: the transaction sets enabled=false on SENSOR triggers
+  // referencing this device; the scheduler picks this up on next evaluation (no CRON jobs affected).
   return new NextResponse(null, { status: 204 })
 }
