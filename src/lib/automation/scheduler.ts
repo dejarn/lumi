@@ -11,15 +11,35 @@ import type { DeviceCommand } from "@/lib/types"
 //   └── PG LISTEN device_state    ← SENSOR triggers
 //
 // v1 has no debounce: a noisy presence sensor fires on every flip.
-// globalThis guard: HMR re-imports this module in dev — close the old PG client first.
+// All mutable state lives on globalThis so that route-handler bundles and the
+// instrumentation bundle share one instance (H1) and HMR tear-down reaches the
+// real PG client and cron jobs (H3).
 
-const schedulerGlobal = globalThis as typeof globalThis & { __lumiSchedulerStarted?: boolean }
+type SchedulerState = {
+  cronJobs: Map<string, cron.ScheduledTask>
+  pgClient: Client | null
+  reconnectTimer: ReturnType<typeof setTimeout> | null
+  reconnectDelayMs: number
+  started: boolean
+  _id: string
+}
 
-const cronJobs = new Map<string, cron.ScheduledTask>()
+const g = globalThis as typeof globalThis & { __lumiScheduler?: SchedulerState }
 
-let pgClient: Client | null = null
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-let reconnectDelayMs = 1000
+function getState(): SchedulerState {
+  if (!g.__lumiScheduler) {
+    g.__lumiScheduler = {
+      cronJobs: new Map(),
+      pgClient: null,
+      reconnectTimer: null,
+      reconnectDelayMs: 1000,
+      started: false,
+      _id: crypto.randomUUID(),
+    }
+  }
+  return g.__lumiScheduler
+}
+
 const MAX_RECONNECT_DELAY_MS = 30_000
 
 async function attachPgListener(client: Client): Promise<void> {
@@ -40,25 +60,27 @@ async function attachPgListener(client: Client): Promise<void> {
 }
 
 async function connectPgListener(): Promise<void> {
-  if (pgClient) {
-    await pgClient.end().catch(() => {})
-    pgClient = null
+  const s = getState()
+  if (s.pgClient) {
+    await s.pgClient.end().catch(() => {})
+    s.pgClient = null
   }
 
   const client = new Client({ connectionString: process.env.DATABASE_URL })
   await client.connect()
   await attachPgListener(client)
-  pgClient = client
-  reconnectDelayMs = 1000
+  s.pgClient = client
+  s.reconnectDelayMs = 1000
   console.info("[scheduler] PG listener connected")
 }
 
 function schedulePgReconnect(): void {
-  if (reconnectTimer) return
-  const delay = reconnectDelayMs
-  reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS)
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null
+  const s = getState()
+  if (s.reconnectTimer) return
+  const delay = s.reconnectDelayMs
+  s.reconnectDelayMs = Math.min(s.reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS)
+  s.reconnectTimer = setTimeout(() => {
+    s.reconnectTimer = null
     void connectPgListener().catch((err) => {
       console.error("[scheduler] PG reconnect failed", err)
       schedulePgReconnect()
@@ -68,17 +90,21 @@ function schedulePgReconnect(): void {
 
 /** Boot the scheduler once. Idempotent (survives dev HMR via globalThis). */
 export async function startScheduler(): Promise<void> {
-  if (schedulerGlobal.__lumiSchedulerStarted) {
-    if (pgClient) {
-      await pgClient.end().catch(() => {})
-      pgClient = null
+  const s = getState()
+  if (s.started) {
+    // HMR / re-import: tear down the OLD instance — reachable because state lives on globalThis
+    if (s.pgClient) {
+      await s.pgClient.end().catch(() => {})
+      s.pgClient = null
     }
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer)
-      reconnectTimer = null
+    if (s.reconnectTimer) {
+      clearTimeout(s.reconnectTimer)
+      s.reconnectTimer = null
     }
+    // Note: do NOT clear cron jobs here — reloadCronJobs() below stops and recreates them.
   }
-  schedulerGlobal.__lumiSchedulerStarted = true
+  s.started = true
+  console.info(`[scheduler] startScheduler (state id=${s._id})`)
 
   await reloadCronJobs()
   await connectPgListener()
@@ -90,8 +116,11 @@ export async function startScheduler(): Promise<void> {
  * without a restart (docs/automation.md#cron-triggers).
  */
 export async function reloadCronJobs(): Promise<void> {
-  for (const job of cronJobs.values()) job.stop()
-  cronJobs.clear()
+  const s = getState()
+  console.info(`[scheduler] reloadCronJobs (state id=${s._id}, jobs=${s.cronJobs.size})`)
+
+  for (const job of s.cronJobs.values()) job.stop()
+  s.cronJobs.clear()
 
   const triggers = await prisma.trigger.findMany({
     where: { type: "CRON", enabled: true, cronExpr: { not: null } },
@@ -109,7 +138,7 @@ export async function reloadCronJobs(): Promise<void> {
         .update({ where: { id: trigger.id }, data: { lastFiredAt: new Date() } })
         .catch(() => {})
     })
-    cronJobs.set(trigger.id, job)
+    s.cronJobs.set(trigger.id, job)
   }
 }
 
