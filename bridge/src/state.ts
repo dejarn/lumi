@@ -71,30 +71,33 @@ export async function writeSensorState(deviceId: string, active: boolean): Promi
 
 /** Availability channel (LUMI LWT / z2m availability / Hue poll) → Device.reachable. */
 export async function writeReachable(deviceId: string, reachable: boolean): Promise<void> {
-  const existingId = await resolveDeviceUuid(deviceId)
-  if (existingId) {
-    await db.device.update({ where: { id: existingId }, data: { reachable } })
-    await notify(existingId)
-    return
-  }
-
-  // Hue/Zigbee callers pass UUID; skip if the row is not known yet.
+  // Hue/Zigbee callers pass a UUID PK — update directly, skip if unknown.
   if (isUuid(deviceId)) {
-    warnDeviceNotFound(deviceId, "writeReachable")
+    const byPk = await db.device.findUnique({ where: { id: deviceId }, select: { id: true } })
+    if (!byPk) {
+      warnDeviceNotFound(deviceId, "writeReachable")
+      return
+    }
+    await db.device.update({ where: { id: byPk.id }, data: { reachable } })
+    await notify(byPk.id)
     return
   }
 
-  // LUMI LWT can arrive before DISCOVERY_ANNOUNCE — create a minimal row.
-  const created = await db.device.create({
-    data: {
+  // LUMI: LWT can arrive before DISCOVERY_ANNOUNCE — atomic upsert prevents P2002
+  // when two retained messages arrive simultaneously on a cold-start.
+  const row = await db.device.upsert({
+    where: { protocol_externalId: { protocol: Protocol.LUMI, externalId: deviceId } },
+    create: {
       name: deviceId,
       protocol: Protocol.LUMI,
       externalId: deviceId,
       kind: DeviceKind.LIGHT,
       reachable,
     },
+    update: { reachable },
+    select: { id: true },
   })
-  await notify(created.id)
+  await notify(row.id)
 }
 
 /** Persist LUMI zone and NOTIFY SSE consumers. */

@@ -5,6 +5,15 @@ import { buildServer } from "./server.js"
 import { db, listLumiDevices } from "./state.js"
 import { setupZigbee } from "./zigbee.js"
 
+// Last-resort safety net: a forgotten event handler must not kill the bridge.
+// PostgreSQL is the source of truth — state re-syncs on the next MQTT/Hue event.
+process.on("unhandledRejection", (reason) => {
+  console.error("[fatal-guard] unhandled rejection:", reason)
+})
+process.on("uncaughtException", (err) => {
+  console.error("[fatal-guard] uncaught exception:", err)
+})
+
 const MQTT_CONNECT_TIMEOUT_MS = 10_000
 
 function log(msg: string): void {
@@ -40,22 +49,42 @@ function validateEnv(): {
   }
 }
 
+function redactUrl(raw: string): string {
+  try {
+    const u = new URL(raw)
+    return `${u.protocol}//${u.host}` // strip userinfo, path, query
+  } catch {
+    return "<unparseable url>" // never fall back to the raw value
+  }
+}
+
 async function waitForMqttConnect(client: MqttClient, timeoutMs: number): Promise<void> {
   if (client.connected) return
 
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
-      client.removeListener("connect", onConnect)
+      cleanup()
       reject(new Error(`MQTT connect timed out after ${timeoutMs}ms`))
     }, timeoutMs)
 
-    function onConnect() {
+    function cleanup() {
       clearTimeout(timer)
       client.removeListener("connect", onConnect)
+      client.removeListener("error", onError)
+    }
+
+    function onConnect() {
+      cleanup()
       resolve()
     }
 
+    function onError(err: Error) {
+      cleanup()
+      reject(err)
+    }
+
     client.on("connect", onConnect)
+    client.on("error", onError)
   })
 }
 
@@ -66,9 +95,12 @@ async function main() {
   log("validating env vars")
   const config = validateEnv()
 
-  log(`connecting to MQTT broker at ${config.mqttUrl}`)
+  log(`connecting to MQTT broker at ${redactUrl(config.mqttUrl)}`)
   const mqttClient = mqtt.connect(config.mqttUrl)
 
+  // Permanent listeners — must be registered before waitForMqttConnect so that
+  // the EventEmitter never throws an unhandled 'error' event during boot.
+  mqttClient.on("error", (err) => console.error("[mqtt] client error:", err.message))
   mqttClient.on("reconnect", () => log("MQTT reconnecting"))
   mqttClient.on("offline", () => log("MQTT offline"))
 
@@ -108,6 +140,7 @@ async function main() {
 
   const shutdown = async (signal: string) => {
     log(`received ${signal}, shutting down`)
+    hue.stopPoll()
     await app.close()
     mqttClient.end()
     await db.$disconnect()

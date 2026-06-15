@@ -9,6 +9,7 @@ import {
   type LumiState as ProtocolLumiState,
 } from "lumi-protocol"
 import { upsertAndNotify, writeLightState, writeReachable } from "./state.js"
+import { fireAndForget } from "./resilience.js"
 
 export { LumiTimeoutError }
 
@@ -72,20 +73,26 @@ export function createLumiBridge(mqttClient: MqttClient): LumiBridge {
 
   client.on("discovery", (dev) => {
     registry.upsert(dev.deviceId, toAnnounce(dev))
-    void upsertAndNotify({
-      externalId: deviceIdToExternalId(dev.deviceId),
-      zone: dev.zoneId,
-      protoVersion: dev.protoVersion,
-    })
+    fireAndForget(
+      "lumi:discovery",
+      upsertAndNotify({
+        externalId: deviceIdToExternalId(dev.deviceId),
+        zone: dev.zoneId,
+        protoVersion: dev.protoVersion,
+      }),
+    )
   })
 
   client.on("availability", (deviceId, online) => {
     registry.setReachable(deviceId, online)
-    void writeReachable(deviceIdToExternalId(deviceId), online)
+    fireAndForget("lumi:availability", writeReachable(deviceIdToExternalId(deviceId), online))
   })
 
   client.on("state_report", (deviceId, state) => {
-    void writeLightState(deviceIdToExternalId(deviceId), mapProtocolState(state))
+    fireAndForget(
+      "lumi:state_report",
+      writeLightState(deviceIdToExternalId(deviceId), mapProtocolState(state)),
+    )
   })
 
   return {

@@ -28,6 +28,7 @@ export interface HueClient {
   /** Fetch lights + connectivity from the Hue Bridge and upsert into Postgres. Returns light count. */
   syncDevices(): Promise<number>
   startPoll(intervalMs: number): void
+  stopPoll(): void
 }
 
 /** Bridge CommandBody → Hue command. Null = unsupported on HUE (animations). */
@@ -90,6 +91,7 @@ export function createHueClient(bridgeIp: string, appKey: string): HueClient {
       setLight: () => Promise.reject(new HueApiError("Hue integration disabled")),
       syncDevices: () => Promise.resolve(0),
       startPoll: () => {},
+      stopPoll: () => {},
     }
   }
 
@@ -138,6 +140,8 @@ export function createHueClient(bridgeIp: string, appKey: string): HueClient {
     return lights.length
   }
 
+  let pollTimer: NodeJS.Timeout | undefined
+
   return {
     async setLight(hueId, cmd) {
       await request("PUT", `/clip/v2/resource/light/${hueId}`, buildLightUpdateBody(cmd))
@@ -146,12 +150,23 @@ export function createHueClient(bridgeIp: string, appKey: string): HueClient {
     syncDevices,
 
     startPoll(intervalMs) {
-      setInterval(() => {
-        // Poll failure ≠ devices offline — keep last known reachable (busy ≠ offline).
-        syncDevices().catch((err: unknown) => {
+      // setTimeout loop: no overlap possible — next tick schedules only after the
+      // current sync completes (or fails). Cadence = "interval between end of sync",
+      // which is fine for a reachability poll.
+      const tick = async () => {
+        try {
+          await syncDevices()
+        } catch (err) {
+          // Poll failure ≠ devices offline — keep last known reachable.
           console.error("[hue] poll failed:", err instanceof Error ? err.message : err)
-        })
-      }, intervalMs)
+        }
+        pollTimer = setTimeout(tick, intervalMs)
+      }
+      pollTimer = setTimeout(tick, intervalMs)
+    },
+
+    stopPoll() {
+      if (pollTimer) clearTimeout(pollTimer)
     },
   }
 }
