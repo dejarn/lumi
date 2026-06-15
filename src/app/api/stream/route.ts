@@ -1,16 +1,17 @@
 import { NextRequest } from "next/server"
-import { Client } from "pg"
 import { requireUser, isResponse } from "@/lib/auth-guard"
 import { prisma } from "@/lib/prisma"
+import { subscribeDeviceState } from "@/lib/device-events"
 import type { DeviceStatePatch } from "@/lib/types"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/stream — a single global SSE stream of live device state (USER).
-// The bridge issues `NOTIFY device_state, '<deviceId>'` after every state write;
-// this handler holds a dedicated PG connection doing `LISTEN device_state`, reads
-// the row, and pushes a `device-state` patch (docs/bridge.md, docs/api.md#stream-sse).
+// GET /api/stream — SSE stream of live device state (USER).
+// Uses a single shared PG LISTEN client (device-events.ts, M4) that fans out
+// to all connected SSE streams via an EventEmitter, avoiding per-client PG
+// connections. The bridge issues `NOTIFY device_state, '<deviceId>'` after
+// every state write (docs/bridge.md, docs/api.md#stream-sse).
 export async function GET(req: NextRequest) {
   const user = await requireUser()
   if (isResponse(user)) return user
@@ -19,15 +20,15 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const client = new Client({ connectionString: process.env.DATABASE_URL })
       let keepAlive: ReturnType<typeof setInterval> | undefined
       let cleaned = false
+      let unsubscribe: (() => void) | undefined
 
       const cleanup = async () => {
         if (cleaned) return
         cleaned = true
         if (keepAlive) clearInterval(keepAlive)
-        await client.end().catch(() => {})
+        if (unsubscribe) unsubscribe()
         try {
           controller.close()
         } catch {
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
       }
 
       try {
-        // M5: check abort before connecting, register handler before connect()
+        // M5: check abort before subscribing, register handler first
         if (req.signal.aborted) {
           await cleanup()
           return
@@ -49,14 +50,9 @@ export async function GET(req: NextRequest) {
           void cleanup()
         })
 
-        await client.connect()
-        await client.query("LISTEN device_state")
-
-        client.on("notification", (msg) => {
+        unsubscribe = subscribeDeviceState((deviceId) => {
           void (async () => {
             try {
-              const deviceId = msg.payload
-              if (!deviceId) return
               const device = await prisma.device.findUnique({ where: { id: deviceId } })
               if (!device) return
               send(toPatch(device))
@@ -64,15 +60,6 @@ export async function GET(req: NextRequest) {
               console.error("[stream] notification handler error", err)
             }
           })()
-        })
-
-        client.on("error", (err) => {
-          console.error("[stream] PG client error", err)
-          void cleanup()
-        })
-
-        client.on("end", () => {
-          void cleanup()
         })
 
         // H2: piggyback User.active recheck on keep-alive (CLAUDE.md rule 3).
@@ -99,7 +86,6 @@ export async function GET(req: NextRequest) {
           })()
         }, 25_000)
       } catch (err) {
-        await client.end().catch(() => {})
         controller.error(err)
       }
     },
