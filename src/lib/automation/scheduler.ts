@@ -186,9 +186,8 @@ export async function activateScene(sceneId: string): Promise<void> {
       commands.push({ type: "brightness", brightness: row.brightness })
 
       if (row.animId !== 0) {
-        // speed/intensity not stored in v1 STATE_REPORT — use defaults
         commands.push({ type: "stopAnimation" })
-        commands.push({ type: "animation", animId: row.animId, speed: 128, intensity: 200 })
+        commands.push({ type: "animation", animId: row.animId, speed: row.animSpeed, intensity: row.animIntensity })
       } else {
         commands.push({
           type: "color",
@@ -199,7 +198,8 @@ export async function activateScene(sceneId: string): Promise<void> {
       }
 
       for (const cmd of commands) {
-        await sendCommand(row.deviceId, cmd).catch(() => {})
+        const res = await sendCommand(row.deviceId, cmd).catch(() => null)
+        if (!res || res.status === 502) break // bridge unreachable: abandon this device (best-effort, CLAUDE.md rule 2)
       }
     }),
   )

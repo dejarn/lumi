@@ -119,6 +119,8 @@ model SceneDevice {
   saturation      Int
   colorBrightness Int
   animId          Int     @default(0)
+  animSpeed       Int     @default(128)
+  animIntensity   Int     @default(200)
 
   scene  Scene  @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)

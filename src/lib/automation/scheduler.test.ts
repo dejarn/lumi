@@ -2,29 +2,72 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    sceneDevice: {
-      findMany: vi.fn(),
-    },
+    sceneDevice: { findMany: vi.fn() },
+    trigger: { findMany: vi.fn(), update: vi.fn().mockResolvedValue({}) },
+    device: { findUnique: vi.fn() },
   },
 }))
 
 vi.mock("@/lib/bridge-client", () => ({
-  sendCommand: vi.fn().mockResolvedValue({ ok: true }),
+  sendCommand: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
 }))
 
+vi.mock("node-cron", () => ({
+  default: {
+    validate: vi.fn().mockReturnValue(true),
+    schedule: vi.fn().mockReturnValue({ stop: vi.fn() }),
+  },
+}))
+
+import cron from "node-cron"
 import { prisma } from "@/lib/prisma"
 import { sendCommand } from "@/lib/bridge-client"
-import { activateScene } from "@/lib/automation/scheduler"
+import { activateScene, reloadCronJobs, onSensorEvent } from "@/lib/automation/scheduler"
 
 describe("CRON triggers", () => {
-  it.todo("registers one node-cron job per enabled CRON trigger at boot")
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("registers one node-cron job per enabled CRON trigger", async () => {
+    vi.mocked(prisma.trigger.findMany).mockResolvedValue([
+      { id: "t1", cronExpr: "* * * * *", sceneId: "s1" },
+      { id: "t2", cronExpr: "0 7 * * *", sceneId: "s2" },
+    ] as never)
+    await reloadCronJobs()
+    expect(cron.schedule).toHaveBeenCalledTimes(2)
+  })
+
+  it("skips trigger with invalid cronExpr", async () => {
+    vi.mocked(cron.validate).mockReturnValueOnce(false)
+    vi.mocked(prisma.trigger.findMany).mockResolvedValue([
+      { id: "t1", cronExpr: "bad", sceneId: "s1" },
+    ] as never)
+    await reloadCronJobs()
+    expect(cron.schedule).not.toHaveBeenCalled()
+  })
+
   it.todo("re-registers jobs when a trigger is created/edited/enabled/disabled/deleted")
   it.todo("skips silently when the bridge is unreachable (no retry, no catch-up)")
 })
 
 describe("SENSOR triggers", () => {
-  it.todo("fires when sensorActive equals the trigger's sensorState")
-  it.todo("ignores disabled triggers")
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("fires when sensorActive equals the trigger's sensorState", async () => {
+    vi.mocked(prisma.device.findUnique).mockResolvedValue({ kind: "SENSOR", sensorActive: true } as never)
+    vi.mocked(prisma.trigger.findMany).mockResolvedValue([
+      { id: "t1", sceneId: "s1" },
+    ] as never)
+    vi.mocked(prisma.sceneDevice.findMany).mockResolvedValue([])
+    await onSensorEvent("d1")
+    expect(prisma.trigger.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "t1" } }))
+  })
+
+  it("ignores non-SENSOR devices", async () => {
+    vi.mocked(prisma.device.findUnique).mockResolvedValue({ kind: "LIGHT", sensorActive: null } as never)
+    await onSensorEvent("d1")
+    expect(prisma.trigger.findMany).not.toHaveBeenCalled()
+  })
+
   it.todo("fires on every matching event in v1 (no debounce)")
 })
 
@@ -94,6 +137,8 @@ describe("scene fan-out", () => {
         saturation: 0,
         colorBrightness: 0,
         animId: 3,
+        animSpeed: 64,
+        animIntensity: 180,
       },
     ] as never)
 
@@ -106,9 +151,23 @@ describe("scene fan-out", () => {
     expect(sendCommand).toHaveBeenNthCalledWith(4, "d1", {
       type: "animation",
       animId: 3,
-      speed: 128,
-      intensity: 200,
+      speed: 64,
+      intensity: 180,
     })
+  })
+
+  it("stops sending commands to a device on bridge 502 (M9 fail-fast)", async () => {
+    vi.mocked(prisma.sceneDevice.findMany).mockResolvedValue([
+      {
+        sceneId: "s1", deviceId: "d1", power: true, brightness: 80,
+        hue: 0, saturation: 0, colorBrightness: 40, animId: 0,
+        animSpeed: 128, animIntensity: 200,
+      },
+    ] as never)
+    vi.mocked(sendCommand).mockResolvedValue({ ok: false, status: 502 } as never)
+    await activateScene("s1")
+    // Only first command sent; loop breaks on 502
+    expect(sendCommand).toHaveBeenCalledTimes(1)
   })
 
   it("tolerates partial failure without throwing", async () => {

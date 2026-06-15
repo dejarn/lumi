@@ -28,6 +28,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
       saturation: d.saturation,
       colorBrightness: d.colorBrightness,
       animId: d.animId,
+      animSpeed: d.animSpeed,
+      animIntensity: d.animIntensity,
       name: d.device.name,
       reachable: d.device.reachable,
       kind: d.device.kind,
