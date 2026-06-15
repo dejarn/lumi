@@ -1,5 +1,6 @@
 import { DeviceKind, Protocol } from "@prisma/client"
 import Fastify from "fastify"
+import { makeAuthHook } from "./auth-hook.js"
 import { parseCommand } from "./command.js"
 import {
   db,
@@ -57,12 +58,7 @@ async function main() {
 
   const app = Fastify({ logger: true })
 
-  app.addHook("onRequest", async (req, reply) => {
-    if (new URL(req.url, "http://localhost").pathname === "/health") return
-    if (req.headers["x-bridge-token"] !== token) {
-      reply.code(401).send({ error: "Unauthorized" })
-    }
-  })
+  app.addHook("onRequest", makeAuthHook(token))
 
   app.get("/health", async (_req, reply) => {
     const dbOk = await dbPing()
@@ -145,7 +141,13 @@ async function main() {
     }
 
     const body = req.body as ZoneBody
-    if (typeof body?.zone !== "number" || !Number.isInteger(body.zone)) {
+    if (
+      !body ||
+      typeof body.zone !== "number" ||
+      !Number.isInteger(body.zone) ||
+      body.zone < 0 ||
+      body.zone > 255
+    ) {
       return reply.code(400).send({ error: "Invalid zone" })
     }
 
