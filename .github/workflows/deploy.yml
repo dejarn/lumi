@@ -39,7 +39,7 @@ jobs:
           printf '%s:%s\n' "$MQTT_USER" "$MQTT_PASSWORD" > mosquitto/passwd
           docker run --rm -v "$PWD/mosquitto:/work" eclipse-mosquitto:openssl \
             mosquitto_passwd -U /work/passwd
-          chmod 644 mosquitto/passwd
+          chmod 640 mosquitto/passwd
 
       - name: Build images
         run: docker compose build
@@ -47,9 +47,13 @@ jobs:
       - name: Start database
         run: docker compose up -d db --wait
 
-      # Migrations run in the app entrypoint (docker/entrypoint.sh)
+      # Migrations run in the app entrypoint (docker/entrypoint.sh).
+      # Option B: two steps so a Zigbee dongle absence never blocks the web deploy.
+      # app/mqtt-bridge/db are critical path (--wait); zigbee2mqtt is best-effort.
       - name: Deploy stack
         run: docker compose up -d app --remove-orphans --wait
+      - name: Start zigbee2mqtt (best-effort)
+        run: docker compose up -d zigbee2mqtt
 
       - name: Prune old images
         if: always()
