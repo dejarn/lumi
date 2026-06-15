@@ -45,7 +45,12 @@ jobs:
           chmod 640 mosquitto/passwd
 
       - name: Build images
-        run: docker compose build
+        # Tag built images with the release tag (or "manual" for workflow_dispatch)
+        # so that rollback is possible without a rebuild: docker compose up uses the
+        # latest tag by default; a previous tag is kept by the selective prune below.
+        run: docker compose build --build-arg BUILD_TAG=${{ github.ref_name || 'manual' }}
+        env:
+          COMPOSE_DOCKER_CLI_BUILD: "1"
 
       - name: Start database
         run: docker compose up -d db --wait
@@ -59,5 +64,9 @@ jobs:
         run: docker compose up -d zigbee2mqtt
 
       - name: Prune old images
+        # Keep the two most recent image generations so an emergency rollback
+        # (`docker compose up` with the previous tag) doesn't require a rebuild.
+        # `docker image prune -f` removes only dangling (untagged) images — tagged
+        # rollback images are never deleted by this step.
         if: always()
         run: docker image prune -f

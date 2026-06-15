@@ -31,7 +31,7 @@ export interface LumiBridge {
   setAnimation(deviceId: string, animId: number, speed: number, intensity: number): Promise<void>
   stopAnimation(deviceId: string): Promise<void>
   setZone(deviceId: string, zone: number): Promise<void>
-  discover(): Promise<void>
+  discover(): void
   hydrateRegistry(
     devices: { externalId: string; reachable: boolean; zone: number; protoVersion?: number | null }[],
   ): void
@@ -109,6 +109,8 @@ export function createLumiBridge(mqttClient: MqttClient): LumiBridge {
         speed,
         intensity,
       })
+      // Optimistic write: DB may briefly diverge from device state until the next
+      // STATE_REPORT arrives. By-design — auto-corrected by the next report (best-effort, rule 2).
       await writeLightState(externalId, { animId, speed, intensity })
     },
 
@@ -116,7 +118,8 @@ export function createLumiBridge(mqttClient: MqttClient): LumiBridge {
 
     setZone: (externalId, zone) => client.setZone(externalIdToDeviceId(externalId), zone),
 
-    async discover() {
+    discover() {
+      // client.discover() publishes a broadcast frame best-effort (no ack expected).
       client.discover()
     },
 
