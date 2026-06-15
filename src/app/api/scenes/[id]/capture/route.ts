@@ -11,15 +11,18 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (isResponse(auth)) return auth
 
   const { id } = await params
-  const { deviceIds } = await req.json()
-  if (!Array.isArray(deviceIds)) {
-    return NextResponse.json({ error: "deviceIds required" }, { status: 400 })
+  const body = await req.json().catch(() => null)
+  const rawIds = body && typeof body === "object" ? (body as { deviceIds?: unknown }).deviceIds : undefined
+  if (!Array.isArray(rawIds) || !rawIds.every((d): d is string => typeof d === "string")) {
+    return NextResponse.json({ error: "deviceIds must be an array of strings" }, { status: 400 })
   }
+  const deviceIds = [...new Set(rawIds)]
 
   const devices = await prisma.device.findMany({
     where: { id: { in: deviceIds } },
     select: { id: true, kind: true, power: true, brightness: true, hue: true,
-              saturation: true, colorBrightness: true, animId: true },
+              saturation: true, colorBrightness: true, animId: true,
+              animSpeed: true, animIntensity: true },
   })
   if (devices.length !== deviceIds.length)
     return NextResponse.json({ error: "One or more devices not found" }, { status: 404 })
@@ -38,6 +41,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     saturation: d.saturation ?? 0,
     colorBrightness: d.colorBrightness ?? 0,
     animId: d.animId ?? 0,
+    animSpeed: d.animSpeed ?? 128,
+    animIntensity: d.animIntensity ?? 200,
   }))
 
   const captured = await prisma.$transaction(async (tx) => {

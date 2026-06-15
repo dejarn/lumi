@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
   const auth = await requireAdmin()
   if (isResponse(auth)) return auth
 
-  const { name } = await req.json()
+  const body = await req.json().catch(() => null)
+  const name = body && typeof body === "object" ? (body as { name?: unknown }).name : undefined
   if (typeof name !== "string" || name.trim().length === 0) {
     return NextResponse.json({ error: "Invalid name" }, { status: 400 })
   }
