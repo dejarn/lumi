@@ -5,9 +5,58 @@ on:
     types: [published]
   workflow_dispatch:
 
+env:
+  # → ghcr.io/dejarn/lumi
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
 jobs:
+  # Build the images in the cloud (native arm64 runner — free on public repos)
+  # and push to GHCR. The Pi never builds: it only pulls (see deploy job).
+  build:
+    name: Build & push images
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: app
+            file: Dockerfile
+          - image: bridge
+            file: bridge/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: true
+          build-args: BUILD_TAG=${{ github.ref_name || 'manual' }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:${{ github.ref_name || 'manual' }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # Pull the freshly built images on the Pi and (re)start the stack. No build
+  # happens here — the Pi only orchestrates containers.
   deploy:
-    name: Build & deploy on Pi
+    name: Deploy on Pi
+    needs: build
     runs-on: [self-hosted, linux, arm64]
     environment: production
     env:
@@ -24,11 +73,17 @@ jobs:
       MQTT_Z2M_PASSWORD: ${{ secrets.MQTT_Z2M_PASSWORD }}
       MQTT_NODES_PASSWORD: ${{ secrets.MQTT_NODES_PASSWORD }}
       BRIDGE_TOKEN: ${{ secrets.BRIDGE_TOKEN }}
-      APP_HOST: ${{ secrets.APP_HOST }}
+      # Routing (host/TLS/rate-limit) now lives in the external reverse-proxy's
+      # dynamic config on the Pi (file provider), so APP_HOST is gone from here.
+      IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+      APP_TAG: ${{ github.ref_name || 'manual' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       # mosquitto/passwd is gitignored, so checkout's git clean wipes it on
       # every deploy. Regenerate it from secrets before the stack starts —
@@ -44,13 +99,8 @@ jobs:
             mosquitto_passwd -U /work/passwd
           chmod 640 mosquitto/passwd
 
-      - name: Build images
-        # Tag built images with the release tag (or "manual" for workflow_dispatch)
-        # so that rollback is possible without a rebuild: docker compose up uses the
-        # latest tag by default; a previous tag is kept by the selective prune below.
-        run: docker compose build --build-arg BUILD_TAG=${{ github.ref_name || 'manual' }}
-        env:
-          COMPOSE_DOCKER_CLI_BUILD: "1"
+      - name: Pull images
+        run: docker compose pull app mqtt-bridge
 
       - name: Start database
         run: docker compose up -d db --wait
@@ -65,7 +115,7 @@ jobs:
 
       - name: Prune old images
         # Keep the two most recent image generations so an emergency rollback
-        # (`docker compose up` with the previous tag) doesn't require a rebuild.
+        # (`APP_TAG=<prev> docker compose up -d app`) doesn't require a re-pull.
         # `docker image prune -f` removes only dangling (untagged) images — tagged
         # rollback images are never deleted by this step.
         if: always()

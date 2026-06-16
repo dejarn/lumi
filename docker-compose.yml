@@ -57,6 +57,7 @@ services:
     mem_limit: 256m
 
   mqtt-bridge:
+    image: ghcr.io/dejarn/lumi/bridge:${APP_TAG:-latest}
     build:
       context: .
       dockerfile: bridge/Dockerfile
@@ -87,6 +88,7 @@ services:
     mem_limit: 256m
 
   app:
+    image: ghcr.io/dejarn/lumi/app:${APP_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -106,19 +108,10 @@ services:
         condition: service_started  # broker down ≠ app down; bridge /health still exposes broker:false
     networks:
       - internal
-      - traefik
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik
-      - traefik.http.routers.lumi.rule=Host(`${APP_HOST:?APP_HOST is required}`)
-      - traefik.http.routers.lumi.entrypoints=websecure
-      - traefik.http.routers.lumi.tls=true
-      - traefik.http.routers.lumi.tls.certresolver=letsencrypt
-      - traefik.http.routers.lumi.middlewares=lumi-authratelimit@docker
-      - traefik.http.services.lumi.loadbalancer.server.port=3000
-      # Rate-limit auth endpoints
-      - traefik.http.middlewares.lumi-authratelimit.ratelimit.average=10
-      - traefik.http.middlewares.lumi-authratelimit.ratelimit.burst=20
+      # Shared network with the external reverse-proxy stack. Routing, TLS and
+      # rate-limiting live entirely in the proxy's own config (not in this repo);
+      # the app just publishes no ports and is reached over this network.
+      - edge
     mem_reservation: 128m
     mem_limit: 512m
     cpus: "0.5"
@@ -127,9 +120,11 @@ networks:
   internal:
     internal: true
   lan: {}
-  traefik:
+  # Shared with the external reverse-proxy stack; created on the host
+  # (`docker network create edge`). Joining only — no proxy config here.
+  edge:
     external: true
-    name: traefik
+    name: edge
 
 volumes:
   db_data:
