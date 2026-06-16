@@ -7,7 +7,7 @@ Lumi uses a Next.js application for the UI and API layer, paired with a dedicate
 ```
 Browser
   │
-  └── HTTPS ──► Traefik (reverse proxy, TLS)
+  └── HTTPS ──► external reverse proxy (TLS)
                      │
                      ▼
                Next.js (App Router)
@@ -108,23 +108,23 @@ The dashboard connects to a SSE Route Handler (`GET /api/stream`). When mqtt-bri
 |---|---|
 | Host | Raspberry Pi 4 (4 GB RAM, self-hosted) |
 | Containerization | Docker Compose |
-| Reverse proxy | Traefik (TLS via Let's Encrypt, rate limiting on the whole `lumi` router — not only `/api/auth`) |
+| Reverse proxy | External reverse proxy on the shared `edge` network (TLS + rate limiting configured in the proxy itself, outside this repo) |
 | CI | GitHub Actions — lint, typecheck, Vitest on every PR |
-| CD | GitHub Actions self-hosted runner on Pi — triggered on release |
+| CD | GitHub Actions — images built & pushed to GHCR on a cloud arm64 runner; the Pi's self-hosted runner only pulls and restarts the stack (triggered on release) |
 
 ### Docker Compose services
 
 | Service | Image | Network |
 |---|---|---|
-| `app` | Custom Next.js multi-stage build | `internal` + `traefik` |
+| `app` | Custom Next.js multi-stage build | `internal` + `edge` |
 | `mqtt-bridge` | Custom Node.js build | `internal` only |
 | `db` | `postgres:18.3-alpine` | `internal` only |
 | `mosquitto` | `eclipse-mosquitto:2.0-openssl` | `internal` + `lan` (port 1883 for ESP32 nodes) |
 | `zigbee2mqtt` | `koenkk/zigbee2mqtt:1.42.0` | `internal` only |
 
-`mqtt-bridge`, `db`, `mosquitto`, and `zigbee2mqtt` are never exposed through Traefik. Only `app` is reachable from the internet.
+`mqtt-bridge`, `db`, `mosquitto`, and `zigbee2mqtt` are never exposed through the reverse proxy. Only `app` is reachable from the internet.
 
-Local dev: `pnpm dev` for Next.js + `docker compose up -d db mosquitto` — no Traefik, no mqtt-bridge in watch mode (can be started separately with `pnpm --filter mqtt-bridge dev`).
+Local dev: `pnpm dev` for Next.js + `docker compose up -d db mosquitto` — no reverse proxy, no mqtt-bridge in watch mode (can be started separately with `pnpm --filter mqtt-bridge dev`).
 
 ## Decisions
 

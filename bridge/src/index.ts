@@ -92,7 +92,7 @@ async function waitForMqttConnect(client: MqttClient, timeoutMs: number): Promis
 
 // Always-on bridge process: maintains MQTT + Hue connections and the in-memory
 // DeviceRegistry, exposes the internal HTTP API (docs/bridge.md). Internal network
-// only — never exposed through Traefik (CLAUDE.md rule 5).
+// only — never exposed through the external reverse-proxy (CLAUDE.md rule 5).
 async function main() {
   log("validating env vars")
   const config = validateEnv()

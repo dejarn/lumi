@@ -43,7 +43,7 @@ No WebSocket, no polling, no external pub/sub — Postgres LISTEN/NOTIFY is the 
 
 - **Best-effort delivery** — command routes return `202`; the *confirmed* state arrives async over SSE. No retry queue, no rollback on partial scene failure.
 - **Instant revocation** — NextAuth v5 JWT sessions, but every request re-checks `User.active` against the DB. A departed flatmate is cut off immediately, no session store needed.
-- **Internal-only bridge** — reachable only from the app container, guarded by a `BRIDGE_TOKEN` header. Never exposed through Traefik.
+- **Internal-only bridge** — reachable only from the app container, guarded by a `BRIDGE_TOKEN` header. Never exposed through the reverse proxy.
 - **Protocol is consumed, never reimplemented** — the bridge uses the `lumi-protocol` Node library (`LumiCodec`, `LumiClient`), pinned to the same git tag as the firmware.
 
 ## Getting started
@@ -103,7 +103,7 @@ pnpm lint && pnpm typecheck   # CI checks, run on every PR
 
 ## Production (Raspberry Pi)
 
-The full stack runs as Docker Compose on the Pi; only the app is exposed to the internet, through an external Traefik network (TLS via Let's Encrypt, rate-limited `/api/auth`).
+The full stack runs as Docker Compose on the Pi; only the app is exposed to the internet, through an external reverse proxy on the shared `edge` network (TLS + rate-limiting configured in the proxy itself, outside this repo).
 
 ```bash
 docker compose up -d
@@ -111,7 +111,7 @@ docker compose up -d
 
 | Service | Image | Exposure |
 |---|---|---|
-| `app` | Next.js multi-stage build | via Traefik (only internet-facing) |
+| `app` | Next.js multi-stage build | via reverse proxy (only internet-facing) |
 | `mqtt-bridge` | Node.js build | internal only |
 | `db` | `postgres:18-alpine` | internal only |
 | `mosquitto` | `eclipse-mosquitto:alpine` | internal only |

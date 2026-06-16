@@ -6,7 +6,7 @@ _Last updated: 2026-06-15_
 
 ## Why a separate service
 
-Next.js Route Handlers are request-scoped — they cannot hold a persistent MQTT connection or a long-lived Hue session across requests. `mqtt-bridge` is a single always-on Node process (Fastify + mqtt.js) that maintains those connections and the in-memory `DeviceRegistry`. It runs on the `internal` Docker network only and is **never exposed through Traefik** (see [architecture.md](architecture.md#infrastructure)).
+Next.js Route Handlers are request-scoped — they cannot hold a persistent MQTT connection or a long-lived Hue session across requests. `mqtt-bridge` is a single always-on Node process (Fastify + mqtt.js) that maintains those connections and the in-memory `DeviceRegistry`. It runs on the `internal` Docker network only and is **never exposed through the reverse proxy** (see [architecture.md](architecture.md#infrastructure)).
 
 ## Connections it maintains
 
