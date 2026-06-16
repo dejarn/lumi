@@ -97,10 +97,15 @@ jobs:
             > mosquitto/passwd
           docker run --rm -v "$PWD/mosquitto:/work" eclipse-mosquitto:2.0-openssl \
             mosquitto_passwd -U /work/passwd
-          chmod 640 mosquitto/passwd
+          # 644 so the mosquitto user in the container can read the bind-mounted file
+          chmod 644 mosquitto/passwd
 
       - name: Pull images
-        run: docker compose pull app mqtt-bridge
+        # Sequential pulls: parallel layer downloads on a 4 GB Pi can OOM-kill
+        # the runner (observed twice as "lost communication with the server").
+        run: |
+          docker compose pull app
+          docker compose pull mqtt-bridge
 
       - name: Start database
         run: docker compose up -d db --wait
