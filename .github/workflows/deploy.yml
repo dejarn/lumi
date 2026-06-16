@@ -116,6 +116,7 @@ jobs:
       - name: Deploy stack
         run: docker compose up -d app --remove-orphans --wait
       - name: Start zigbee2mqtt (best-effort)
+        continue-on-error: true
         run: docker compose up -d zigbee2mqtt
 
       - name: Prune old images
