@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import bcrypt from "bcryptjs"
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -32,10 +33,20 @@ describe("authorizeCredentials", () => {
     expect(result).toBeNull()
   })
 
-  it("rejects env bootstrap when an active admin already exists", async () => {
+  it("skips env bootstrap when an active admin already exists and falls back to DB auth", async () => {
+    const hashedPassword = await bcrypt.hash("secretpass", 12)
     vi.mocked(prisma.user.count).mockResolvedValue(1)
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: "a1",
+      username: "admin",
+      role: "ADMIN",
+      active: true,
+      hashedPassword,
+      createdAt: new Date(),
+    } as never)
+
     const result = await authorizeCredentials("admin", "secretpass")
-    expect(result).toBeNull()
+    expect(result).toEqual({ id: "a1", username: "admin", role: "ADMIN" })
     expect(prisma.user.upsert).not.toHaveBeenCalled()
   })
 

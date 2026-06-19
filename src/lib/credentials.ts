@@ -27,8 +27,7 @@ export async function authorizeCredentials(
 ): Promise<AuthUser | null> {
   const usernameMatch = safeEqual(username, process.env.ADMIN_USERNAME ?? "")
   const passwordMatch = safeEqual(password, process.env.ADMIN_PASSWORD ?? "")
-  if (usernameMatch && passwordMatch) {
-    if (!(await bootstrapAllowed())) return null
+  if (usernameMatch && passwordMatch && (await bootstrapAllowed())) {
     const admin = await prisma.user.upsert({
       where: { username },
       update: {},
