@@ -1,4 +1,4 @@
-import { Agent } from "undici"
+import { Agent, fetch } from "undici"
 import { byteToPercent, hsvToXy, percentToByte, xyToHsv } from "./hue-color.js"
 import { upsertHueLight, type HueLightUpsert } from "./state.js"
 import type { CommandBody } from "./command.js"
@@ -108,7 +108,6 @@ export function createHueClient(bridgeIp: string, appKey: string): HueClient {
         ...(body !== undefined && { "content-type": "application/json" }),
       },
       ...(body !== undefined && { body: JSON.stringify(body) }),
-      // @ts-expect-error undici dispatcher option is not in the DOM fetch types
       dispatcher,
     })
     if (!res.ok) {
