@@ -33,7 +33,8 @@ services:
       # Auth is mandatory (mosquitto.conf: allow_anonymous false).
       - lan
     ports:
-      - "1883:1883"
+      # Bind to LAN IP only — bare "1883:1883" would also publish on public IPv6.
+      - "${LAN_IP}:1883:1883"
     mem_limit: 128m
 
   zigbee2mqtt:

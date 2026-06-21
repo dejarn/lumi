@@ -73,9 +73,12 @@ jobs:
       MQTT_Z2M_PASSWORD: ${{ secrets.MQTT_Z2M_PASSWORD }}
       MQTT_NODES_PASSWORD: ${{ secrets.MQTT_NODES_PASSWORD }}
       BRIDGE_TOKEN: ${{ secrets.BRIDGE_TOKEN }}
-      # Routing (host/TLS/rate-limit) now lives in the external reverse-proxy's
-      # dynamic config on the Pi (file provider), so APP_HOST is gone from here.
+      # Pin project name: runner and hand-bootstrap share one set of volumes.
+      COMPOSE_PROJECT_NAME: lumi
+      # Routing now lives in the external reverse-proxy's config (APP_HOST gone).
       IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+      # Pi LAN IP mosquitto binds 1883 to (LAN-only, off public IPv6).
+      LAN_IP: ${{ vars.LAN_IP }}
       APP_TAG: ${{ github.ref_name || 'manual' }}
 
     steps:
